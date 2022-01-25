@@ -38,7 +38,7 @@ namespace ItemSearchPlugin.Filters {
         public override bool HasChanged {
             get {
                 if (searchText != lastSearchText) {
-                    ParseInputText(); 
+                    //ParseInputText(); 
                     lastSearchText = searchText;
                     return true;
                 }
@@ -47,7 +47,7 @@ namespace ItemSearchPlugin.Filters {
             }
         }
 
-        public override bool CheckFilter(Item item) {
+        /*public override bool CheckFilter(Item item) {
             if (searchRegex != null) {
                 return searchRegex.IsMatch(item.Name);
             }
@@ -57,9 +57,14 @@ namespace ItemSearchPlugin.Filters {
                 || (searchTokens != null && searchTokens.Length > 0 && searchTokens.All(t => item.Name.ToString().ToLower().Contains(t)))
                 || (int.TryParse(parsedSearchText, out var parsedId) && parsedId == item.RowId)
                 || searchText.StartsWith("$") && item.Description.ToString().ToLower().Contains(parsedSearchText.Substring(1).ToLower());
+        }*/
+
+        public override bool CheckFilter(Item item)
+        {
+            return item.Name.ToString().ToUpperInvariant().Contains(searchText.ToUpperInvariant(), StringComparison.InvariantCulture);
         }
-        
-        public override bool CheckFilter(EventItem item) {
+
+        /*public override bool CheckFilter(EventItem item) {
             if (searchRegex != null) {
                 return searchRegex.IsMatch(item.Name);
             }
@@ -68,16 +73,20 @@ namespace ItemSearchPlugin.Filters {
                 item.Name.ToString().ToLower().Contains(parsedSearchText.ToLower())
                 || (searchTokens != null && searchTokens.Length > 0 && searchTokens.All(t => item.Name.ToString().ToLower().Contains(t)))
                 || (int.TryParse(parsedSearchText, out var parsedId) && parsedId == item.RowId);
-                //|| searchText.StartsWith("$") && item.Description.ToString().ToLower().Contains(parsedSearchText.Substring(1).ToLower());
+        }*/
+
+        public override bool CheckFilter(EventItem item)
+        {
+            return item.Name.ToString().ToUpperInvariant().Contains(searchText.ToUpperInvariant(), StringComparison.InvariantCulture);
         }
-        
+
         public override void DrawEditor() {
             ImGui.SetNextItemWidth(-20 * ImGui.GetIO().FontGlobalScale);
             if (PluginConfig.AutoFocus && ImGui.IsWindowAppearing()) {
                 ImGui.SetKeyboardFocusHere();
             }
             ImGui.InputText("##ItemNameSearchFilter", ref searchText, 256);
-            ImGui.SameLine();
+            /*ImGui.SameLine();
             ImGui.TextDisabled("(?)");
             if (ImGui.IsItemHovered()) {
                 ImGui.BeginTooltip();
@@ -96,7 +105,7 @@ namespace ItemSearchPlugin.Filters {
 
 
                 ImGui.EndTooltip();
-            }
+            }*/
 
         }
 
@@ -104,6 +113,7 @@ namespace ItemSearchPlugin.Filters {
             return searchText;
         }
 
+        /*
         public void ParseInputText() {
             window.SearchFilters.ForEach(f => f.ClearTags());
             
@@ -123,6 +133,7 @@ namespace ItemSearchPlugin.Filters {
             string currentTag = null;
             var tags = new List<string>();
 
+            
             foreach (var c in searchText) {
                 switch (c) {
                     case BeginTag: {
@@ -163,6 +174,7 @@ namespace ItemSearchPlugin.Filters {
                 }
             }
 
+            
             if (currentTag != null) {
                 parsedSearchText += $"{BeginTag}{currentTag}";
             }
@@ -171,8 +183,8 @@ namespace ItemSearchPlugin.Filters {
                 window.SearchFilters.ForEach(f => f.ParseTag(t));
             }
 
-            parsedSearchText = parsedSearchText.Trim();
-        }
+            parsedSearchText = searchText;
+        }*/
 
 
     }
