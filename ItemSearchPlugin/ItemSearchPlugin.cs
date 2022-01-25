@@ -64,7 +64,6 @@ namespace ItemSearchPlugin {
             CraftingRecipeFinder?.Dispose();
             itemSearchWindow?.Dispose();
             RemoveCommands();
-            PluginInterface.Dispose();
             
 
             foreach (var t in textureDictionary) {
@@ -117,19 +116,6 @@ namespace ItemSearchPlugin {
                 HelpMessage = Loc.Localize("ItemSearchCommandHelp", "Open a window you can use to link any specific item to chat."),
                 ShowInHelp = true
             });
-
-            CommandManager.AddHandler("/fittingroom", new Dalamud.Game.Command.CommandInfo((command, arguments) => {
-                this.FittingRoomUI.OpenFittingRoom();
-            }) {
-                HelpMessage = Loc.Localize("ItemSearchFittingRoomCommand", "Open the fitting room."),
-                ShowInHelp = true
-            });
-
-#if DEBUG
-            CommandManager.AddHandler("/itemsearchdumploc", new Dalamud.Game.Command.CommandInfo(((command, arguments) => {
-                Loc.ExportLoadedDictionary();
-            })) {ShowInHelp = false, HelpMessage = ""});
-#endif
         }
 
         public void OnItemSearchCommand(string command, string args) {
@@ -140,7 +126,6 @@ namespace ItemSearchPlugin {
 
         public void RemoveCommands() {
             CommandManager.RemoveHandler("/xlitem");
-            CommandManager.RemoveHandler("/fittingroom");
 #if DEBUG
             CommandManager.RemoveHandler("/itemsearchdumploc");
 #endif
@@ -150,9 +135,7 @@ namespace ItemSearchPlugin {
 
         private Stopwatch debugStopwatch = new Stopwatch();
         private void BuildUI() {
-            
 
-            
             if (drawItemSearchWindow) {
 
                 drawItemSearchWindow = itemSearchWindow != null && itemSearchWindow.Draw();
