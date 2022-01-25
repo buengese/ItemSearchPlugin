@@ -128,9 +128,9 @@ namespace ItemSearchPlugin {
                 new EquipAsSearchFilter(pluginConfig, data, pluginInterface),
                 new RaceSexSearchFilter(pluginConfig, data, pluginInterface),
                 new CraftableSearchFilter(pluginConfig, data),
-                new DesynthableSearchFilter(pluginConfig, data),
-                new SoldByNPCSearchFilter(pluginConfig, data),
-                new BooleanSearchFilter(pluginConfig, "Dyeable", "Dyeable", "Not Dyeable", BooleanSearchFilter.CheckFunc("IsDyeable")),
+                //new DesynthableSearchFilter(pluginConfig, data),
+                //new SoldByNPCSearchFilter(pluginConfig, data),
+                /*new BooleanSearchFilter(pluginConfig, "Dyeable", "Dyeable", "Not Dyeable", BooleanSearchFilter.CheckFunc("IsDyeable")),
                 new BooleanSearchFilter(pluginConfig, "Unique", "Unique", "Not Unique", BooleanSearchFilter.CheckFunc("IsUnique")),
                 new BooleanSearchFilter(pluginConfig, "Tradable", "Tradable", "Not Tradable", BooleanSearchFilter.CheckFunc("IsUntradable", true)),
                 new BooleanSearchFilter(pluginConfig, "Key Item", "Key Item", "Normal Item", ((item, t, f) => !t), ((item, t, f) => !f)),
@@ -139,16 +139,16 @@ namespace ItemSearchPlugin {
                         return FfxivStoreActionButton.StoreItems.ContainsKey(item.RowId);
                     }
                     return !FfxivStoreActionButton.StoreItems.ContainsKey(item.RowId);
-                }) { VisibleFunction = () => pluginConfig.EnableFFXIVStore },
-                new StatSearchFilter(pluginConfig, data),
-                new CollectableSearchFilter(pluginConfig, plugin),
+                }) { VisibleFunction = () => pluginConfig.EnableFFXIVStore },*/
+                //new StatSearchFilter(pluginConfig, data),
+                //new CollectableSearchFilter(pluginConfig, plugin),*/
             };
 
             SearchFilters.ForEach(a => a.ConfigSetup());
 
             ActionButtons = new List<IActionButton> {
                 new MarketBoardActionButton(pluginConfig),
-                new DataSiteActionButton(pluginConfig),
+            //    new DataSiteActionButton(pluginConfig),
                 new RecipeSearchActionButton(plugin.CraftingRecipeFinder),
                 new FfxivStoreActionButton(pluginConfig),
                 new CopyItemAsJson(plugin),
@@ -290,17 +290,6 @@ namespace ItemSearchPlugin {
                     ImGui.BeginChild("NoSelectedItemBox", new Vector2(-1, 45) * ImGui.GetIO().FontGlobalScale);
                     ImGui.Text(Loc.Localize("ItemSearchSelectItem", "Please select an item."));
 
-
-                    if (!pluginConfig.HideKofi) {
-                        ImGui.PushStyleColor(ImGuiCol.Button, 0xFF5E5BFF);
-                        ImGui.PushStyleColor(ImGuiCol.ButtonActive, 0xFF5E5BAA);
-                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 0xFF5E5BDD);
-                        ImGui.SameLine(ImGui.GetWindowWidth() - ImGui.CalcTextSize("Support on Ko-fi").X - ImGui.GetStyle().FramePadding.X * 3);
-                        if (ImGui.Button("Support on Ko-Fi")) {
-                            Process.Start("https://ko-fi.com/Caraxi");
-                        }
-                        ImGui.PopStyleColor(3);
-                    }
                     
                     ImGui.EndChild();
                 }
@@ -363,19 +352,31 @@ namespace ItemSearchPlugin {
                         UpdateItemList();
                     }
                 } else if (plugin.LuminaItems != null) {
+
+
+                    // Actual search here!
+
+
                     if (SearchFilters.Any(x => x.IsEnabled && x.ShowFilter && x.IsSet)) {
                         showingFavourites = false;
                         isSearch = true;
-                        var scrollTop = false;
+                        /*
+                        if (SearchFilters.Any(x => x.IsEnabled && x.HasChanged) || forceReload)
+                        {
+                            forceReload = false;
+
+                            items = SearchFilters.Where(filter => filter.IsEnabled && filter.IsSet).Aggregate(plugin.LuminaItems, (current, filter) => current.Where(filter.CheckFilter).ToList());
+                            this.selectedItemIndex = -1;
+                            selectedItem = null;
+                        }
+
+                        DrawItemList(items, childSize, ref isOpen);*/
+
                         if (SearchFilters.Any(x => x.IsEnabled && x.ShowFilter && x.HasChanged) || forceReload) {
                             forceReload = false;
                             this.searchCancelTokenSource?.Cancel();
                             this.searchCancelTokenSource = new CancellationTokenSource();
                             var asyncEnum = plugin.LuminaItems.ToAsyncEnumerable();
-
-                            if (!pluginConfig.ShowLegacyItems) {
-                                asyncEnum = asyncEnum.Where(x => x.RowId < 100 || x.RowId > 1600);
-                            }
 
                             asyncEnum = SearchFilters.Where(filter => filter.IsEnabled && filter.ShowFilter && filter.IsSet).Aggregate(asyncEnum, (current, filter) => current.Where(filter.CheckFilter));
                             this.selectedItemIndex = -1;
@@ -387,7 +388,7 @@ namespace ItemSearchPlugin {
                             DrawItemList(this.searchTask.Result, childSize, ref isOpen);
                         }
 
-                        
+
                     } else {
 
 
@@ -407,6 +408,10 @@ namespace ItemSearchPlugin {
                 } else {
                     ImGui.TextColored(new Vector4(0.86f, 0.86f, 0.86f, 1.00f), Loc.Localize("DalamudItemSelectLoading", "Loading item list..."));
                 }
+
+                //
+                // END ACTUAL SEARCH
+                //
 
                 PopStyle();
 
@@ -486,7 +491,8 @@ namespace ItemSearchPlugin {
                 ImGui.PopFont();
                 var itemCountText = isSearch ? string.Format(Loc.Localize("ItemCount", "{0} Items"), this.searchTask.Result.Count) : $"v{plugin.Version}";
                 ImGui.SameLine(ImGui.GetWindowWidth() - (configTextSize.X + ImGui.GetStyle().ItemSpacing.X) - (ImGui.CalcTextSize(itemCountText).X + ImGui.GetStyle().ItemSpacing.X * (isSearch ? 3 : 2)));
-                if (isSearch) {
+                if (isSearch)
+                {
                     if (ImGui.Button(itemCountText)) {
                         PluginLog.Log("Copying results to Clipboard");
 
