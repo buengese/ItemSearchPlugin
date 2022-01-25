@@ -4,6 +4,7 @@
 		<TargetFramework>net5.0-windows</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<Platforms>x64</Platforms>
+		<Configurations>Debug;Release;NonWindows</Configurations>
 	</PropertyGroup>
 	<PropertyGroup Label="Build">
 		<OutputType>Library</OutputType>
@@ -25,6 +26,11 @@
 		<PathMap>$(AppOutputBase)=F:\repo\ItemSearch\ItemSearchPlugin</PathMap>
 		<Deterministic>true</Deterministic>
 	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'NonWindows|x64' ">
+	  <AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
+	  <PathMap>$(AppOutputBase)=F:\repo\ItemSearch\ItemSearchPlugin</PathMap>
+	  <Deterministic>true</Deterministic>
+	</PropertyGroup>
 	<PropertyGroup>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -41,17 +47,23 @@
 		<EmbeddedResource Remove="lib\**" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="System.Linq.Async" Version="5.0.0" PrivateAssets="all"/>
+		<PackageReference Include="System.Linq.Async" Version="5.0.0" PrivateAssets="all" />
 		<PackageReference Include="DalamudPackager" Version="2.1.2" />
 		<PackageReference Include="ILRepack" Version="2.1.0-beta1" />
 	</ItemGroup>
-	<Target Name="ILRepack" AfterTargets="PostBuildEvent">
+	
+	<PropertyGroup Label="DalamudDeps" Condition="'$(Configuration)'=='NonWindows'">
+		<AppData>\Users\buengese\Projects</AppData>
+	</PropertyGroup>
+
+	<Target Name="ILRepack" AfterTargets="PostBuildEvent" Condition="'$(Configuration)'!='NonWindows'">
 		<ItemGroup>
 			<InputAssemblies Include="$(TargetPath)" />
 			<InputAssemblies Include="$(TargetDir)*.dll" Exclude="$(TargetPath)" />
 		</ItemGroup>
 		<Exec Command="$(PkgILRepack)\tools\ILRepack.exe /lib:$(AppData)\XIVLauncher\addon\Hooks\dev /out:$(TargetDir)..\$(Configuration).ILMerge\$(TargetFileName) @(InputAssemblies, ' ')" />
 	</Target>
+
 	<ItemGroup>
 		<Reference Include="Microsoft.CSharp" />
 		<Reference Include="Dalamud">
