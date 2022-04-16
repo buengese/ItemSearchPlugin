@@ -53,7 +53,10 @@
 	</ItemGroup>
 	
 	<PropertyGroup Label="DalamudDeps" Condition="'$(Configuration)'=='NonWindows'">
-		<AppData>\Users\buengese\Projects</AppData>
+		<DalamudPath>/Users/buengese/Library/Application Support/XIV on Mac/game/drive_c/Program Files/XIV on Mac/Dalamud</DalamudPath>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)'!='NonWindows'">
+		<DalamudPath>$(AppData)\XIVLauncher\addon\Hooks\dev</DalamudPath>
 	</PropertyGroup>
 
 	<Target Name="ILRepack" AfterTargets="PostBuildEvent" Condition="'$(Configuration)'!='NonWindows'">
@@ -68,35 +71,35 @@
 		<Reference Include="Microsoft.CSharp" />
 		<Reference Include="Dalamud">
 			<Private>false</Private>
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Dalamud.dll</HintPath>
+			<HintPath>$(DalamudPath)\Dalamud.dll</HintPath>
 		</Reference>
 		<Reference Include="FFXIVClientStructs">
 			<Private>false</Private>
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\FFXIVClientStructs.dll</HintPath>
+			<HintPath>$(DalamudPath)\FFXIVClientStructs.dll</HintPath>
 		</Reference>
 		<Reference Include="ImGui.NET">
 			<Private>false</Private>
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\ImGui.NET.dll</HintPath>
+			<HintPath>$(DalamudPath)\ImGui.NET.dll</HintPath>
 		</Reference>
 		<Reference Include="ImGuiScene">
 			<Private>false</Private>
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\ImGuiScene.dll</HintPath>
+			<HintPath>$(DalamudPath)\ImGuiScene.dll</HintPath>
 		</Reference>
 		<Reference Include="Serilog">
 			<Private>false</Private>
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Serilog.dll</HintPath>
+			<HintPath>$(DalamudPath)\Serilog.dll</HintPath>
 		</Reference>
 		<Reference Include="Newtonsoft.Json">
 			<Private>false</Private>
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Newtonsoft.Json.dll</HintPath>
+			<HintPath>$(DalamudPath)\Newtonsoft.Json.dll</HintPath>
 		</Reference>
 		<Reference Include="Lumina">
 			<Private>false</Private>
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Lumina.dll</HintPath>
+			<HintPath>$(DalamudPath)\Lumina.dll</HintPath>
 		</Reference>
 		<Reference Include="Lumina.Excel">
 			<Private>false</Private>
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Lumina.Excel.dll</HintPath>
+			<HintPath>$(DalamudPath)\Lumina.Excel.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 	<ItemGroup>
