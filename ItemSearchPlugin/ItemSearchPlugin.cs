@@ -40,8 +40,8 @@ namespace ItemSearchPlugin {
         [PluginService] public static Framework Framework { get; private set; } = null!;
 
         public ItemSearchPluginConfig PluginConfig { get; private set; }
-
-        public FittingRoomUI FittingRoomUI { get; private set; }
+        
+        public TryOn TryOn { get; private set; }
 
         public readonly Dictionary<ushort, TextureWrap> textureDictionary = new Dictionary<ushort, TextureWrap>();
 
@@ -60,9 +60,9 @@ namespace ItemSearchPlugin {
 
         public void Dispose() {
             PluginInterface.UiBuilder.Draw -= this.BuildUI;
-            FittingRoomUI?.Dispose();
             CraftingRecipeFinder?.Dispose();
             itemSearchWindow?.Dispose();
+            TryOn?.Dispose();
             RemoveCommands();
             
 
@@ -89,8 +89,8 @@ namespace ItemSearchPlugin {
             SetupGameFunctions();
 
             ReloadLocalization();
-
-            FittingRoomUI = new FittingRoomUI(this);
+            
+            TryOn = new TryOn(this);
 
             CraftingRecipeFinder = new CraftingRecipeFinder(this);
 
@@ -150,27 +150,6 @@ namespace ItemSearchPlugin {
 
 
             debugStopwatch.Restart();
-            if (PluginConfig.EnableFittingRoomSaves || PluginConfig.ShowItemID) {
-                if (FittingRoomUI == null) {
-                    FittingRoomUI = new FittingRoomUI(this);
-                } else {
-                    if (PluginConfig.EnableFittingRoomSaves) {
-                        FittingRoomUI?.Draw();
-                    }
-                }
-            }
-            
-#if DEBUG
-            ImGui.BeginMainMenuBar();
-            if (ImGui.MenuItem("ItemSearch")) {
-                itemSearchWindow?.Dispose();
-                itemSearchWindow = new ItemSearchWindow(this);
-                drawItemSearchWindow = true;
-            }
-
-            ImGui.EndMainMenuBar();
-#endif
-
         }
 
         internal void LinkItem(GenericItem item) {
