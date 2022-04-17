@@ -25,9 +25,7 @@ namespace ItemSearchPlugin.Filters {
         private readonly string falseString;
         private readonly Func<Item, bool, bool, bool> checkFunction;
         private readonly Func<EventItem, bool, bool, bool> keyCheckFunction;
-
-        public Func<bool> VisibleFunction;
-
+        
         private bool showTrue = true;
         private bool showFalse = true;
 
@@ -47,7 +45,7 @@ namespace ItemSearchPlugin.Filters {
 
         public override string Name { get; }
 
-        public override bool ShowFilter => VisibleFunction == null || VisibleFunction();
+        public override bool ShowFilter => ItemSearchPlugin.ClientState.LocalContentId != 0 && base.ShowFilter;
 
         public override string NameLocalizationKey => $"{Name}SearchFilter";
         public override bool IsSet => usingTag || showTrue == false || showFalse == false;

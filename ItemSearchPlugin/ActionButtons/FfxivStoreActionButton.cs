@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace ItemSearchPlugin.ActionButtons {
     public class FfxivStoreActionButton : IActionButton {
 
         private static ItemSearchPluginConfig _pluginConfig;
-        public static Dictionary<uint, List<uint>> StoreItems = new();
+        private static Dictionary<uint, List<uint>> StoreItems = new();
         private static Dictionary<uint, Product> StoreProducts = new();
 
         private static Task _storeUpdateTask;
@@ -79,10 +80,11 @@ namespace ItemSearchPlugin.ActionButtons {
         }
 
 
-        private static void UpdateTask() {
+        private static async void UpdateTask() {
             UpdateStatus = "Fetching Product List";
-            using var wc = new WebClient();
-            var json = wc.DownloadString("https://api.store.finalfantasyxiv.com/ffxivcatalog/api/products/?lang=en-us&currency=USD&limit=10000");
+
+            var client = new HttpClient();
+            var json = await client.GetStringAsync("https://api.store.finalfantasyxiv.com/ffxivcatalog/api/products/?lang=en-us&currency=USD&limit=10000");
             if (_updateCancellationToken.IsCancellationRequested) {
                 UpdateStatus = "[Cancelled] " + UpdateStatus;;
                 return;
@@ -125,7 +127,7 @@ namespace ItemSearchPlugin.ActionButtons {
                         fullProductJson = File.ReadAllText(cacheFile);
                     } else {
                         UpdateStatus = $"Fetching Store Items: {i}/{productList.Products.Count} [{p.ID}, from Store]";
-                        fullProductJson = wc.DownloadString($"https://api.store.finalfantasyxiv.com/ffxivcatalog/api/products/{p.ID}?lang=en-us&currency=USD");
+                        fullProductJson = await client.GetStringAsync("https://api.store.finalfantasyxiv.com/ffxivcatalog/api/products/{p.ID}?lang=en-us&currency=USD");
                     }
 
                     if (_updateCancellationToken.IsCancellationRequested) {

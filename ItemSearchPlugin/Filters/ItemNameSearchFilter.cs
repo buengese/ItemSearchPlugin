@@ -12,15 +12,9 @@ namespace ItemSearchPlugin.Filters {
         private string lastSearchText;
         private string[] searchTokens;
 
-        private Regex searchRegex;
-
-        private string parsedSearchText = string.Empty;
-        private ItemSearchWindow window;
-
         public ItemNameSearchFilter(ItemSearchPluginConfig config, ItemSearchWindow window, string startingValue = "") : base(config) {
             searchText = startingValue;
             lastSearchText = string.Empty;
-            this.window = window;
         }
         
         public override string Name => "Search";
