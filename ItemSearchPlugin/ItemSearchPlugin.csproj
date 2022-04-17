@@ -14,7 +14,8 @@
 	</PropertyGroup>
 	<PropertyGroup Label="Feature">
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Version>1.8.2.3</Version>
+		<Version>2.0.0.1</Version>
+		<Authors>Caraxi, buengese</Authors>
 	</PropertyGroup>
 	<ItemGroup Label="Resources">
 		<None Include="$(SolutionDir)/Resources/**/*" CopyToOutputDirectory="PreserveNewest" Visible="false" />
@@ -48,7 +49,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="System.Linq.Async" Version="5.0.0" PrivateAssets="all" />
-		<PackageReference Include="DalamudPackager" Version="2.1.2" />
+		<PackageReference Include="DalamudPackager" Version="2.1.6" />
 		<PackageReference Include="ILRepack" Version="2.1.0-beta1" />
 	</ItemGroup>
 	
