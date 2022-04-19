@@ -66,7 +66,7 @@ namespace ItemSearchPlugin.Filters {
             
             if (collectableActionType.Contains(actionType)) {
                 isCollectable = true;
-                isOwned = actionType == 3357 ? plugin.IsCardOwned((ushort) item.AdditionalData) : plugin.ItemActionUnlocked(item);
+                isOwned = actionType == 3357 && plugin.IsCardOwned((ushort) item.AdditionalData);
             }
 
             return (isCollectable, isOwned);

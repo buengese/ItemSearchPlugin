@@ -230,15 +230,15 @@ namespace ItemSearchPlugin {
             var cardUnlockedAddress = SigScanner.ScanText("E8 ?? ?? ?? ?? 8D 7B 78");
             cardUnlocked = Marshal.GetDelegateForFunctionPointer<CardUnlockedDelegate>(cardUnlockedAddress);
 
-            var itemActionUnlockedAddress = SigScanner.ScanText("E8 ?? ?? ?? ?? 84 C0 75 A9");
-            itemActionUnlocked = Marshal.GetDelegateForFunctionPointer<ItemActionUnlockedDelegate>(itemActionUnlockedAddress);
+            // var itemActionUnlockedAddress = SigScanner.ScanText("E8 ?? ?? ?? ?? 84 C0 75 A9");
+            // itemActionUnlocked = Marshal.GetDelegateForFunctionPointer<ItemActionUnlockedDelegate>(itemActionUnlockedAddress);
         }
 
 
         private delegate byte ItemActionUnlockedDelegate(IntPtr data);
         private delegate bool CardUnlockedDelegate(IntPtr a1, ushort card);
 
-        private ItemActionUnlockedDelegate itemActionUnlocked;
+        //private ItemActionUnlockedDelegate itemActionUnlocked;
         private CardUnlockedDelegate cardUnlocked;
         private IntPtr cardUnlockedStatic;
 
@@ -246,7 +246,7 @@ namespace ItemSearchPlugin {
             return cardUnlocked(cardUnlockedStatic, cardId);
         }
 
-        internal unsafe bool ItemActionUnlocked(Item item) {
+        /* unsafe bool ItemActionUnlocked(Item item) {
             var itemAction = item.ItemAction.Value;
             if (itemAction == null) {
                 return false;
@@ -266,6 +266,6 @@ namespace ItemSearchPlugin {
             Marshal.FreeHGlobal(mem);
 
             return ret;
-        }
+        }*/
     }
 }
