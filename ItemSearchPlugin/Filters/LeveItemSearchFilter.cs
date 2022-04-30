@@ -7,7 +7,7 @@ using ImGuiNET;
 namespace ItemSearchPlugin.Filters {
     class LevelItemSearchFilter : SearchFilter {
         private int MinLevel = 1;
-        private int MaxLevel = 600;
+        private int MaxLevel = 700;
 
         private int minLevel;
         private int maxLevel;
