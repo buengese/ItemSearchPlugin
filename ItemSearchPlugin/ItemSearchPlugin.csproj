@@ -4,7 +4,7 @@
 		<TargetFramework>net5.0-windows</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<Platforms>x64</Platforms>
-		<Configurations>Debug;Release;NonWindows</Configurations>
+		<Configurations>Debug;Release</Configurations>
 	</PropertyGroup>
 	<PropertyGroup Label="Build">
 		<OutputType>Library</OutputType>
@@ -27,11 +27,6 @@
 		<PathMap>$(AppOutputBase)=F:\repo\ItemSearch\ItemSearchPlugin</PathMap>
 		<Deterministic>true</Deterministic>
 	</PropertyGroup>
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'NonWindows|x64' ">
-	  <AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
-	  <PathMap>$(AppOutputBase)=F:\repo\ItemSearch\ItemSearchPlugin</PathMap>
-	  <Deterministic>true</Deterministic>
-	</PropertyGroup>
 	<PropertyGroup>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -52,15 +47,15 @@
 		<PackageReference Include="DalamudPackager" Version="2.1.6" />
 		<PackageReference Include="ILRepack" Version="2.1.0-beta1" />
 	</ItemGroup>
-	
-	<PropertyGroup Label="DalamudDeps" Condition="'$(Configuration)'=='NonWindows'">
-		<DalamudPath>/Users/buengese/Library/Application Support/XIV on Mac/game/drive_c/Program Files/XIV on Mac/Dalamud</DalamudPath>
+
+	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+		<DalamudPath>$(DALAMUD_PATH)</DalamudPath>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)'!='NonWindows'">
-		<DalamudPath>$(AppData)\XIVLauncher\addon\Hooks\dev</DalamudPath>
+	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+		<DalamudPath>$(AppData)\XIVLauncher\addon\Hooks\dev\</DalamudPath>
 	</PropertyGroup>
 
-	<Target Name="ILRepack" AfterTargets="PostBuildEvent" Condition="'$(Configuration)'!='NonWindows'">
+	<Target Name="ILRepack" AfterTargets="PostBuildEvent" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
 		<ItemGroup>
 			<InputAssemblies Include="$(TargetPath)" />
 			<InputAssemblies Include="$(TargetDir)*.dll" Exclude="$(TargetPath)" />
