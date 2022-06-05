@@ -19,16 +19,12 @@ using Lumina.Excel.GeneratedSheets;
 namespace ItemSearchPlugin {
     internal class ItemSearchWindow : IDisposable {
         private readonly ItemSearchPlugin plugin;
-        private readonly DalamudPluginInterface pluginInterface;
-        private readonly DataManager data;
-        private readonly UiBuilder builder;
         private GenericItem selectedItem;
         private int selectedItemIndex = -1;
 
         private CancellationTokenSource searchCancelTokenSource;
         private ValueTask<List<GenericItem>> searchTask;
 
-        private readonly ItemSearchPluginConfig pluginConfig;
         public List<SearchFilter> SearchFilters;
         public List<IActionButton> ActionButtons;
 
@@ -83,22 +79,18 @@ namespace ItemSearchPlugin {
         }
 
         public ItemSearchWindow(ItemSearchPlugin plugin, string searchText = "") {
-            this.pluginInterface = ItemSearchPlugin.PluginInterface;
-            this.data = ItemSearchPlugin.Data;
-            this.builder = pluginInterface.UiBuilder;
-            this.pluginConfig = plugin.PluginConfig;
             this.plugin = plugin;
-            extraFiltersExpanded = pluginConfig.ExpandedFilters;
-            autoTryOn = pluginConfig.ShowTryOn && pluginConfig.TryOnEnabled;
+            extraFiltersExpanded = Service.Configuration.ExpandedFilters;
+            autoTryOn = Service.Configuration.ShowTryOn && Service.Configuration.TryOnEnabled;
 
-            while (!data.IsDataReady)
+            while (!Service.Data.IsDataReady)
                 Thread.Sleep(1);
 
-            stains = data.Excel.GetSheet<Stain>().ToList();
+            stains = Service.Data.Excel.GetSheet<Stain>()?.ToList();
             FixStainsOrder();
 
-            if (pluginConfig.SelectedStain > 0) {
-                selectedStain = stains.FirstOrDefault(s => s.RowId == pluginConfig.SelectedStain);
+            if (Service.Configuration.SelectedStain > 0) {
+                selectedStain = stains.FirstOrDefault(s => s.RowId == Service.Configuration.SelectedStain);
                 if (selectedStain != null) {
                     var b = selectedStain.Color & 255;
                     var g = (selectedStain.Color >> 8) & 255;
@@ -120,14 +112,14 @@ namespace ItemSearchPlugin {
             };
             
             SearchFilters = new List<SearchFilter> {
-                new ItemNameSearchFilter(pluginConfig, this, searchText),
-                new ItemUICategorySearchFilter(pluginConfig, data),
-                new LevelEquipSearchFilter(pluginConfig),
-                new LevelItemSearchFilter(pluginConfig),
-                new RaritySearchFilter(pluginConfig),
-                new EquipAsSearchFilter(pluginConfig, data, pluginInterface),
-                new RaceSexSearchFilter(pluginConfig, data, pluginInterface),
-                new CraftableSearchFilter(pluginConfig, data),
+                new ItemNameSearchFilter(this, searchText),
+                new ItemUICategorySearchFilter(),
+                new LevelEquipSearchFilter(),
+                new LevelItemSearchFilter(),
+                new RaritySearchFilter(),
+                new EquipAsSearchFilter(),
+                new RaceSexSearchFilter(),
+                new CraftableSearchFilter(),
                 //new DesynthableSearchFilter(pluginConfig, data),
                 //new SoldByNPCSearchFilter(pluginConfig, data),
                 /*new BooleanSearchFilter(pluginConfig, "Dyeable", "Dyeable", "Not Dyeable", BooleanSearchFilter.CheckFunc("IsDyeable")),
@@ -147,11 +139,11 @@ namespace ItemSearchPlugin {
             SearchFilters.ForEach(a => a.ConfigSetup());
 
             ActionButtons = new List<IActionButton> {
-                new MarketBoardActionButton(pluginConfig),
+                new MarketBoardActionButton(),
             //    new DataSiteActionButton(pluginConfig),
                 new RecipeSearchActionButton(plugin.CraftingRecipeFinder),
-                new FfxivStoreActionButton(pluginConfig),
-                new CopyItemAsJson(plugin),
+                new FfxivStoreActionButton(),
+                new CopyItemAsJson(),
             };
         }
 
@@ -160,7 +152,7 @@ namespace ItemSearchPlugin {
             triedLoadingItems = true;
             errorLoadingItems = false;
             plugin.LuminaItems = null;
-            plugin.LuminaItemsClientLanguage = pluginConfig.SelectedClientLanguage;
+            plugin.LuminaItemsClientLanguage = Service.Configuration.SelectedClientLanguage;
 #if DEBUG
             var sw = new Stopwatch();
 #endif
@@ -173,8 +165,8 @@ namespace ItemSearchPlugin {
                 try {
                     var list = new List<GenericItem>();
                     
-                    list.AddRange(this.data.GetExcelSheet<Item>(pluginConfig.SelectedClientLanguage).Where(i => !string.IsNullOrEmpty(i.Name)).Select(i => new GenericItem(i)));
-                    list.AddRange(this.data.GetExcelSheet<EventItem>(pluginConfig.SelectedClientLanguage).Where(i => !string.IsNullOrEmpty(i.Name)).Select(i => new GenericItem(i)));
+                    list.AddRange(Service.Data.GetExcelSheet<Item>(Service.Configuration.SelectedClientLanguage)!.Where(i => !string.IsNullOrEmpty(i.Name)).Select(i => new GenericItem(i)));
+                    list.AddRange(Service.Data.GetExcelSheet<EventItem>(Service.Configuration.SelectedClientLanguage)!.Where(i => !string.IsNullOrEmpty(i.Name)).Select(i => new GenericItem(i)));
                     
                     return list;
                 } catch (Exception ex) {
@@ -208,7 +200,7 @@ namespace ItemSearchPlugin {
 
             try {
                 var isSearch = false;
-                if (triedLoadingItems == false || pluginConfig.SelectedClientLanguage != plugin.LuminaItemsClientLanguage) UpdateItemList(1000);
+                if (triedLoadingItems == false || Service.Configuration.SelectedClientLanguage != plugin.LuminaItemsClientLanguage) UpdateItemList(1000);
 
                 if ((selectedItemIndex < 0 && selectedItem != null) || (selectedItemIndex >= 0 && selectedItem == null)) {
                     // Should never happen, but just incase
@@ -252,7 +244,7 @@ namespace ItemSearchPlugin {
                     
                     ImGui.Text(selectedItem.Name);
 
-                    if (pluginConfig.ShowItemID) {
+                    if (Service.Configuration.ShowItemID) {
                         ImGui.SameLine();
                         ImGui.Text($"(ID: {selectedItem.RowId}) (Rarity: {selectedItem.Rarity})");
                     }
@@ -334,8 +326,8 @@ namespace ItemSearchPlugin {
                 if (ImGui.Button($"{(extraFiltersExpanded ? (char) FontAwesomeIcon.CaretUp : (char) FontAwesomeIcon.CaretDown)}", new Vector2(-1, 10 * ImGui.GetIO().FontGlobalScale))) {
                     extraFiltersExpanded = !extraFiltersExpanded;
                     SearchFilters.ForEach(f => f._ForceVisible = f.IsEnabled && f.ShowFilter && f.IsSet);
-                    pluginConfig.ExpandedFilters = extraFiltersExpanded;
-                    pluginConfig.Save();
+                    Service.Configuration.ExpandedFilters = extraFiltersExpanded;
+                    Service.Configuration.Save();
                 }
                 ImGui.PopStyleVar(2);
                 ImGui.PopFont();
@@ -392,12 +384,12 @@ namespace ItemSearchPlugin {
                     } else {
 
 
-                        if (pluginConfig.Favorites.Count > 0) {
-                            if (!showingFavourites || favouritesList.Count != pluginConfig.Favorites.Count) {
+                        if (Service.Configuration.Favorites.Count > 0) {
+                            if (!showingFavourites || favouritesList.Count != Service.Configuration.Favorites.Count) {
                                 showingFavourites = true;
                                 this.selectedItemIndex = -1;
                                 selectedItem = null;
-                                favouritesList = plugin.LuminaItems.Where(i => pluginConfig.Favorites.Contains(i.RowId)).ToList();
+                                favouritesList = plugin.LuminaItems.Where(i => Service.Configuration.Favorites.Contains(i.RowId)).ToList();
                             }
                             
                             DrawItemList(favouritesList, childSize, ref isOpen);
@@ -424,7 +416,7 @@ namespace ItemSearchPlugin {
                     try {
                         if (selectedItem != null && selectedItem.Icon < 65000) {
                             plugin.LinkItem(selectedItem);
-                            if (pluginConfig.CloseOnChoose) {
+                            if (Service.Configuration.CloseOnChoose) {
                                 isOpen = false;
                             }
                         }
@@ -435,7 +427,7 @@ namespace ItemSearchPlugin {
 
                 PopStyle();
 
-                if (!pluginConfig.CloseOnChoose) {
+                if (!Service.Configuration.CloseOnChoose) {
                     ImGui.SameLine();
                     if (ImGui.Button(Loc.Localize("Close", "Close"))) {
                         selectedItem = null;
@@ -448,11 +440,11 @@ namespace ItemSearchPlugin {
                     ImGui.Text(Loc.Localize("DalamudItemNotLinkable", "This item is not linkable."));
                 }
 
-                if (pluginConfig.ShowTryOn && ItemSearchPlugin.ClientState?.LocalContentId != 0) {
+                if (Service.Configuration.ShowTryOn && Service.ClientState?.LocalContentId != 0) {
                     ImGui.SameLine();
                     if (ImGui.Checkbox(Loc.Localize("ItemSearchTryOnButton", "Try On"), ref autoTryOn)) {
-                        pluginConfig.TryOnEnabled = autoTryOn;
-                        pluginConfig.Save();
+                        Service.Configuration.TryOnEnabled = autoTryOn;
+                        Service.Configuration.Save();
                     }
 
                     ImGui.SameLine();
@@ -467,8 +459,8 @@ namespace ItemSearchPlugin {
                     if (ImGui.IsItemClicked(ImGuiMouseButton.Left)) {
                         selectedStainColor = Vector4.Zero;
                         selectedStain = null;
-                        pluginConfig.SelectedStain = 0;
-                        pluginConfig.Save();
+                        Service.Configuration.SelectedStain = 0;
+                        Service.Configuration.Save();
                     }
 
                     PopStyle();
@@ -498,7 +490,7 @@ namespace ItemSearchPlugin {
 
                         var sb = new StringBuilder();
 
-                        if (pluginConfig.PrependFilterListWithCopy) {
+                        if (Service.Configuration.PrependFilterListWithCopy) {
                             foreach (var f in SearchFilters.Where(f => f.IsSet)) {
                                 sb.AppendLine($"{f.Name}: {f}");
                             }
@@ -565,8 +557,8 @@ namespace ItemSearchPlugin {
                                     selectedStain = stain;
                                     selectedStainColor = stainColor;
                                     showStainSelector = false;
-                                    pluginConfig.SelectedStain = stain.RowId;
-                                    pluginConfig.Save();
+                                    Service.Configuration.SelectedStain = stain.RowId;
+                                    Service.Configuration.Save();
                                 }
 
                                 ImGui.PopStyleColor(1);
@@ -654,10 +646,10 @@ namespace ItemSearchPlugin {
                         var starTextSize = ImGui.CalcTextSize(starText);
                         var starTextHovered = ImGui.IsMouseHoveringRect(ImGui.GetCursorScreenPos(), ImGui.GetCursorScreenPos() + starTextSize);
 
-                        uint starTextCol = pluginConfig.Favorites.Contains(itemList[i].RowId) ? 0xCC0000AA : 0U; ;
+                        uint starTextCol = Service.Configuration.Favorites.Contains(itemList[i].RowId) ? 0xCC0000AA : 0U; ;
 
                         if (starTextHovered) {
-                            starTextCol = pluginConfig.Favorites.Contains(itemList[i].RowId) ? 0xAA777777 : 0xAA0000AAU;
+                            starTextCol = Service.Configuration.Favorites.Contains(itemList[i].RowId) ? 0xAA777777 : 0xAA0000AAU;
                             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                         }
 
@@ -665,12 +657,12 @@ namespace ItemSearchPlugin {
 
                         ImGui.Text(starText);
                         if (ImGui.IsItemClicked()) {
-                            if (pluginConfig.Favorites.Contains(itemList[i].RowId)) {
-                                pluginConfig.Favorites.Remove(itemList[i].RowId);
+                            if (Service.Configuration.Favorites.Contains(itemList[i].RowId)) {
+                                Service.Configuration.Favorites.Remove(itemList[i].RowId);
                             } else {
-                                pluginConfig.Favorites.Add(itemList[i].RowId);
+                                Service.Configuration.Favorites.Add(itemList[i].RowId);
                             }
-                            pluginConfig.Save();
+                            Service.Configuration.Save();
                         }
 
                         ImGui.PopStyleColor(); colorsPushed--;
@@ -709,7 +701,7 @@ namespace ItemSearchPlugin {
                                 if (this.selectedItem != null && selectedItem.Icon < 65000) {
                                     try {
                                         plugin.LinkItem(selectedItem);
-                                        if (pluginConfig.CloseOnChoose) {
+                                        if (Service.Configuration.CloseOnChoose) {
                                             isOpen = false;
                                         }
                                     } catch (Exception ex) {
@@ -719,7 +711,8 @@ namespace ItemSearchPlugin {
                             }
 
                             if (selectedItem.GenericItemType == GenericItem.ItemType.Item) {
-                                if ((autoTryOn = autoTryOn && pluginConfig.ShowTryOn) && plugin.TryOn.CanUseTryOn && ItemSearchPlugin.ClientState.LocalContentId != 0) {
+                                if ((autoTryOn = autoTryOn && Service.Configuration.ShowTryOn) 
+                                    && Service.ClientState.LocalContentId != 0) {
                                     if (selectedItem.ClassJobCategory.Row != 0) {
                                         plugin.TryOn.TryOnItem((Item)selectedItem, selectedStain?.RowId ?? 0);
                                     }
@@ -748,8 +741,8 @@ namespace ItemSearchPlugin {
                     }
                 }
 
-                var keyStateDown = ImGui.GetIO().KeysDown[0x28] || ItemSearchPlugin.KeyState[0x28];
-                var keyStateUp = ImGui.GetIO().KeysDown[0x26] || ItemSearchPlugin.KeyState[0x26];
+                var keyStateDown = ImGui.GetIO().KeysDown[0x28] || Service.KeyState[0x28];
+                var keyStateUp = ImGui.GetIO().KeysDown[0x26] || Service.KeyState[0x26];
 
 #if DEBUG
                 // Random up/down if both are pressed
@@ -803,7 +796,7 @@ namespace ItemSearchPlugin {
                     doSearchScroll = true;
                     this.selectedItem = itemList[selectedItemIndex];
                     if (selectedItem.GenericItemType == GenericItem.ItemType.Item) {
-                        if ((autoTryOn = autoTryOn && pluginConfig.ShowTryOn) && plugin.TryOn.CanUseTryOn && ItemSearchPlugin.ClientState.LocalContentId != 0) {
+                        if ((autoTryOn = autoTryOn && Service.Configuration.ShowTryOn) && Service.ClientState.LocalContentId != 0) {
                             if (selectedItem.ClassJobCategory.Row != 0) {
                                 plugin.TryOn.TryOnItem((Item)selectedItem, selectedStain?.RowId ?? 0);
                             }
