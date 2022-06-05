@@ -11,14 +11,9 @@ using Dalamud.Logging;
 
 namespace ItemSearchPlugin {
     public class TryOn : IDisposable {
-
-        private readonly ItemSearchPlugin plugin;
-
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate byte TryOnDelegate(uint unknownCanEquip, uint itemBaseId, ulong stainColor, uint itemGlamourId, byte unknownByte);
-
-        private readonly TryOnDelegate tryOn;
-
+        
+        private GameFunctions GameFunctions { get; }
+        
         private int tryOnDelay = 10;
 
         private readonly Queue<(uint itemid, uint stain)> tryOnQueue = new();
@@ -27,32 +22,21 @@ namespace ItemSearchPlugin {
             SuppressLog = uint.MaxValue - 10,
         }
 
-        public TryOn(ItemSearchPlugin plugin) {
-            this.plugin = plugin;
-
-            try {
-                var address = new AddressResolver();
-                address.Setup(ItemSearchPlugin.SigScanner);
-                tryOn = Marshal.GetDelegateForFunctionPointer<TryOnDelegate>(address.TryOn);
-
-                CanUseTryOn = true;
-                ItemSearchPlugin.Framework.Update += FrameworkUpdate;
-            } catch (Exception ex) {
-                PluginLog.LogError(ex.ToString());
-            }
+        public TryOn(GameFunctions gameFunctions)
+        {
+            this.GameFunctions = gameFunctions;
+            Service.Framework.Update += FrameworkUpdate;
         }
-
-        public bool CanUseTryOn { get; }
-
+        
         public void TryOnItem(Item item, uint stain = 0, bool hq = false) {
 #if DEBUG
             PluginLog.Log($"Try On: {item.Name}");
 #endif
             if (item.EquipSlotCategory?.Value == null) return;
             if (item.EquipSlotCategory.Row > 0 && item.EquipSlotCategory.Row != 6 && item.EquipSlotCategory.Row != 17 && (item.EquipSlotCategory.Value.OffHand <=0 || item.ItemUICategory.Row == 11)) {
-                if (plugin.PluginConfig.SuppressTryOnMessage) tryOnQueue.Enqueue(((uint) TryOnControlID.SuppressLog, 1));
+                if (Service.Configuration.SuppressTryOnMessage) tryOnQueue.Enqueue(((uint) TryOnControlID.SuppressLog, 1));
                 tryOnQueue.Enqueue((item.RowId + (uint) (hq ? 1000000 : 0), stain));
-                if (plugin.PluginConfig.SuppressTryOnMessage) tryOnQueue.Enqueue(((uint)TryOnControlID.SuppressLog, 0));
+                if (Service.Configuration.SuppressTryOnMessage) tryOnQueue.Enqueue(((uint)TryOnControlID.SuppressLog, 0));
             }
 #if DEBUG
             else {
@@ -61,29 +45,24 @@ namespace ItemSearchPlugin {
 #endif
         }
 
-        public void OpenFittingRoom() {
-            tryOnQueue.Enqueue((0, 0));
-        }
-
-        
-        public void FrameworkUpdate(Framework framework) {
+        private void FrameworkUpdate(Framework framework) {
             
-            while (CanUseTryOn && tryOnQueue.Count > 0 && (tryOnDelay <= 0 || tryOnDelay-- <= 0)) {
+            while (tryOnQueue.Count > 0 && (tryOnDelay <= 0 || tryOnDelay-- <= 0)) {
                 try {
                     var (itemId, stain) = tryOnQueue.Dequeue();
 
                     switch ((TryOnControlID) itemId) {
                         case TryOnControlID.SuppressLog: {
                             if (stain == 1) {
-                                ItemSearchPlugin.Chat.ChatMessage += ChatOnOnChatMessage;
+                                Service.Chat.ChatMessage += ChatOnOnChatMessage;
                             } else {
-                                ItemSearchPlugin.Chat.ChatMessage -= ChatOnOnChatMessage;
+                                Service.Chat.ChatMessage -= ChatOnOnChatMessage;
                             }
                             break;
                         }
                         default: {
                             tryOnDelay = 1;
-                            tryOn(0xFF, itemId, stain, 0, 0);
+                            GameFunctions._tryOn(0xFF, itemId, stain, 0, 0);
                             break;
                         }
                     }
@@ -96,8 +75,10 @@ namespace ItemSearchPlugin {
         }
 
         private void ChatOnOnChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled) {
-            if (type != XivChatType.SystemMessage || message.Payloads.Count <= 1 || (ItemSearchPlugin.ClientState.ClientLanguage == ClientLanguage.Japanese ? message.Payloads[message.Payloads.Count - 1] : message.Payloads[0]) is not TextPayload a) return;
-            var handle = ItemSearchPlugin.ClientState.ClientLanguage switch {
+            if (type != XivChatType.SystemMessage || message.Payloads.Count <= 1 ||
+                (Service.ClientState.ClientLanguage == ClientLanguage.Japanese ? message.Payloads[message.Payloads.Count - 1] : message.Payloads[0]) 
+                is not TextPayload a) return;
+            var handle = Service.ClientState.ClientLanguage switch {
                 ClientLanguage.English => a.Text?.StartsWith("You try on ") ?? false,
                 ClientLanguage.German => a.Text?.StartsWith("Da hast ") ?? false,
                 ClientLanguage.French => a.Text?.StartsWith("Vous essayez ") ?? false,
@@ -108,7 +89,7 @@ namespace ItemSearchPlugin {
         }
 
         public void Dispose() {
-            ItemSearchPlugin.Framework.Update -= FrameworkUpdate;
+            Service.Framework.Update -= FrameworkUpdate;
         }
     }
 }
