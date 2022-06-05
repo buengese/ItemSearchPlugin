@@ -9,10 +9,6 @@ using Dalamud.Logging;
 
 namespace ItemSearchPlugin {
     public class CraftingRecipeFinder : IDisposable {
-        private readonly ItemSearchPlugin plugin;
-
-        private readonly AddressResolver Address;
-
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate IntPtr GetUIObjectDelegate();
         private readonly GetUIObjectDelegate getUIObject;
@@ -33,49 +29,63 @@ namespace ItemSearchPlugin {
 
         private bool disposed;
         
-        public CraftingRecipeFinder(ItemSearchPlugin plugin) {
-            this.plugin = plugin;
+        private AddressResolver Address { get;  }
 
+        public CraftingRecipeFinder(AddressResolver address)
+        {
+            this.Address = address;
             try {
-                Address = new AddressResolver();
-                Address.Setup(ItemSearchPlugin.SigScanner);
-
-                getUIObject = Marshal.GetDelegateForFunctionPointer<GetUIObjectDelegate>(Address.GetUIObject);
-                getAgentObject = Marshal.GetDelegateForFunctionPointer<GetAgentObjectDelegate>(Address.GetAgentObject);
-                searchItemByCraftingMethod = Marshal.GetDelegateForFunctionPointer<SearchItemByCraftingMethodDelegate>(Address.SearchItemByCraftingMethod);
+                getUIObject = Marshal.GetDelegateForFunctionPointer<GetUIObjectDelegate>(address.GetUiObject);
+                getAgentObject = Marshal.GetDelegateForFunctionPointer<GetAgentObjectDelegate>(address.GetAgentObject);
+                searchItemByCraftingMethod = Marshal.GetDelegateForFunctionPointer<SearchItemByCraftingMethodDelegate>(address.SearchItemByCraftingMethod);
             } catch (Exception ex) {
-                PluginLog.LogError(ex.ToString());
+                PluginLog.LogError(ex, "CraftingRecipeFinder: failed to setup delegates");
             }
         }
 
         private void OnFrameworkUpdate(Framework framework) {
-            try {
+            try
+            {
                 if (disposed) return;
-                if (ItemSearchPlugin.ClientState.LocalContentId == 0) return;
-                if (!searchQueue.TryDequeue(out var itemID)) {
-                    ItemSearchPlugin.Framework.Update -= OnFrameworkUpdate;
+
+                if (Service.ClientState.LocalContentId == 0) return;
+
+                if (!searchQueue.TryDequeue(out var itemID))
+                {
+                    Service.Framework.Update -= OnFrameworkUpdate;
                     return;
                 }
+
                 var uiObjectPtr = getUIObject();
-                if (uiObjectPtr.Equals(IntPtr.Zero)) {
+                if (uiObjectPtr.Equals(IntPtr.Zero))
+                {
                     PluginLog.LogError("CraftingRecipeFinder: Null pointer returned from GetUIObject()");
                     return;
+
                 }
+
                 getUIAgentModule = Address.GetVirtualFunction<GetUIAgentModuleDelegate>(uiObjectPtr, 0, 34);
                 var uiAgentModulePtr = getUIAgentModule(uiObjectPtr);
-                if (uiAgentModulePtr.Equals(IntPtr.Zero)) {
+                if (uiAgentModulePtr.Equals(IntPtr.Zero))
+                {
                     PluginLog.LogError("CraftingRecipeFinder: Null pointer returned from GetUIAgentModule()");
                     return;
                 }
+
                 var recipeAgentPtr = getAgentObject(uiAgentModulePtr, 23);
-                if (recipeAgentPtr.Equals(IntPtr.Zero)) {
+                if (recipeAgentPtr.Equals(IntPtr.Zero))
+                {
                     PluginLog.LogError("CraftingRecipeFinder: Null pointer returned from GetAgentObject()");
                     return;
                 }
 
                 searchItemByCraftingMethod(recipeAgentPtr, (ushort) itemID);
 
-            } catch (NullReferenceException) { }
+            }
+            catch (NullReferenceException)
+            {
+                
+            }
         }
 
         public void SearchRecipesByItem(Item item) {
@@ -86,13 +96,13 @@ namespace ItemSearchPlugin {
             }
 
             searchQueue.Enqueue(item.RowId);
-            ItemSearchPlugin.Framework.Update -= OnFrameworkUpdate;
-            ItemSearchPlugin.Framework.Update += OnFrameworkUpdate;
+            Service.Framework.Update -= OnFrameworkUpdate;
+            Service.Framework.Update += OnFrameworkUpdate;
         }
 
         public void Dispose() {
             disposed = true;
-            ItemSearchPlugin.Framework.Update -= OnFrameworkUpdate;
+            Service.Framework.Update -= OnFrameworkUpdate;
         }
     }
 }
