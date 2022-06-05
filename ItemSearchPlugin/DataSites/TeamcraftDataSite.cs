@@ -13,14 +13,9 @@ namespace ItemSearchPlugin.DataSites {
         public override string GetItemUrl(Item item) => $"https://ffxivteamcraft.com/db/en/item/{item.RowId}/{item.Name.ToString().Replace(' ', '-')}";
 
         private static bool teamcraftLocalFailed = false;
-        private ItemSearchPluginConfig config;
-
-        public TeamcraftDataSite(ItemSearchPluginConfig config) {
-            this.config = config;
-        }
 
         public override void OpenItem(Item item) {
-            if (!(teamcraftLocalFailed || config.TeamcraftForceBrowser)) {
+            if (!(teamcraftLocalFailed || Service.Configuration.TeamcraftForceBrowser)) {
                 Task.Run(() => {
                     try {
                         var wr = WebRequest.CreateHttp($"http://localhost:14500/db/en/item/{item.RowId}");
