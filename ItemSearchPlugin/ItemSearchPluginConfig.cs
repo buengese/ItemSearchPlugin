@@ -13,7 +13,6 @@ using ItemSearchPlugin.ActionButtons;
 namespace ItemSearchPlugin {
 
     public class ItemSearchPluginConfig : IPluginConfiguration {
-        [NonSerialized] private DalamudPluginInterface pluginInterface;
         [NonSerialized] private ItemSearchPlugin plugin;
         [JsonIgnore] internal List<(string localizationKey, string englishName)> FilterNames { get; } = new List<(string localizationKey, string englishName)>();
 
@@ -67,12 +66,12 @@ namespace ItemSearchPlugin {
         public ClientLanguage SelectedClientLanguage {
             get {
                 return SelectedLanguage switch {
-                    0 => ItemSearchPlugin.ClientState.ClientLanguage,
+                    0 => Service.ClientState.ClientLanguage,
                     1 => ClientLanguage.English,
                     2 => ClientLanguage.Japanese,
                     3 => ClientLanguage.French,
                     4 => ClientLanguage.German,
-                    _ => ItemSearchPlugin.ClientState.ClientLanguage,
+                    _ => Service.ClientState.ClientLanguage,
                 };
             }
         }
@@ -89,7 +88,7 @@ namespace ItemSearchPlugin {
             LoadDefaults();
         }
 
-        public void LoadDefaults() {
+        private void LoadDefaults() {
             CloseOnChoose = false;
             ShowItemID = false;
             MarketBoardPluginIntegration = false;
@@ -106,18 +105,20 @@ namespace ItemSearchPlugin {
             TeamcraftForceBrowser = false;
         }
 
-
-        public void Init(DalamudPluginInterface pluginInterface, ItemSearchPlugin plugin) {
-            this.pluginInterface = pluginInterface;
-            this.plugin = plugin;
-        }
-
         public void Save() {
-            this.pluginInterface.SavePluginConfig(this);
+            Service.PluginInterface.SavePluginConfig(this);
+        }
+        
+        internal void ReloadLocalization() {
+            if (!string.IsNullOrEmpty(Language)) {
+                Loc.LoadLanguage(Language);
+            } else {
+                Loc.LoadDefaultLanguage();
+            }
         }
 
 
-        public bool DrawConfigUI() {
+        public bool DrawConfigUi() {
             ImGuiWindowFlags windowFlags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse;
             bool drawConfig = true;
             ImGui.Begin("Item Search Config", ref drawConfig, windowFlags);

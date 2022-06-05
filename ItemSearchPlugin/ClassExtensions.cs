@@ -85,8 +85,8 @@ namespace ItemSearchPlugin {
             DescriptionAttribute[] attributes = (DescriptionAttribute[])fi.GetCustomAttributes(
                 typeof(DescriptionAttribute), false);
 
-            if (attributes != null && attributes.Length > 0) return attributes[0].Description;
-            else return source.ToString();
+            if (attributes.Length > 0) return attributes[0].Description;
+            return source.ToString();
         }
 
 
