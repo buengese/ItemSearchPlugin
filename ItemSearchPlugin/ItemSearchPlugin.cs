@@ -19,10 +19,10 @@ using Lumina.Excel.GeneratedSheets;
 namespace ItemSearchPlugin {
     public class ItemSearchPlugin : IDalamudPlugin {
         public string Name => "Item Search";
-        
-        internal TryOn TryOn { get; }
 
-        internal CraftingRecipeFinder CraftingRecipeFinder { get; }
+        internal TryOn TryOn { get; } = null;
+
+        internal CraftingRecipeFinder CraftingRecipeFinder { get; } = null;
 
         private readonly Dictionary<ushort, TextureWrap> textureDictionary = new();
 
@@ -54,12 +54,20 @@ namespace ItemSearchPlugin {
             Service.Configuration.ReloadLocalization();
 
 
-            var address = new AddressResolver();
-            address.Setup(Service.SigScanner);
+            try
+            {
+                var address = new AddressResolver();
+                address.Setup(Service.SigScanner);
 
-            var gameFunctions = new GameFunctions(address);
-            TryOn = new TryOn(gameFunctions);
-            CraftingRecipeFinder = new CraftingRecipeFinder(address);
+                var gameFunctions = new GameFunctions(address);
+                TryOn = new TryOn(gameFunctions);
+                CraftingRecipeFinder = new CraftingRecipeFinder(address);
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Error(ex, "GameFunction setup failed some feature disabled");
+            }
+
 
             Service.PluginInterface.UiBuilder.Draw += this.BuildUI;
             SetupCommands();
@@ -106,7 +114,6 @@ namespace ItemSearchPlugin {
         }
         
         private void BuildUI() {
-
             if (drawItemSearchWindow) {
 
                 drawItemSearchWindow = itemSearchWindow != null && itemSearchWindow.Draw();
