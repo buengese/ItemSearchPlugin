@@ -1,21 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Dalamud;
-using Dalamud.Data;
-using Dalamud.Game;
-using Dalamud.Game.ClientState;
-using Dalamud.Game.ClientState.Keys;
-using Dalamud.Game.Command;
-using Dalamud.Game.Gui;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
-using Dalamud.IoC;
 using Dalamud.Logging;
 using Dalamud.Plugin;
 using Dalamud.Utility;
@@ -27,27 +19,15 @@ using Lumina.Excel.GeneratedSheets;
 namespace ItemSearchPlugin {
     public class ItemSearchPlugin : IDalamudPlugin {
         public string Name => "Item Search";
-
-
-        [PluginService] public static DalamudPluginInterface PluginInterface { get; private set; } = null!;
-        [PluginService] public static DataManager Data { get; private set; } = null!;
-        [PluginService] public static CommandManager CommandManager { get; private set; } = null!;
-        [PluginService] public static KeyState KeyState { get; private set; } = null!;
-        [PluginService] public static ChatGui Chat { get; private set; } = null!;
-        [PluginService] public static SigScanner SigScanner { get; private set; } = null!;
-        [PluginService] public static ClientState ClientState { get; private set; } = null!;
-        [PluginService] public static GameGui GameGui { get; private set; } = null!;
-        [PluginService] public static Framework Framework { get; private set; } = null!;
-
-        public ItemSearchPluginConfig PluginConfig { get; private set; }
         
-        public TryOn TryOn { get; private set; }
+        internal TryOn TryOn { get; }
 
-        public readonly Dictionary<ushort, TextureWrap> textureDictionary = new Dictionary<ushort, TextureWrap>();
+        internal CraftingRecipeFinder CraftingRecipeFinder { get; }
 
-        public CraftingRecipeFinder CraftingRecipeFinder { get; private set; }
+        private readonly Dictionary<ushort, TextureWrap> textureDictionary = new();
 
         internal ItemSearchWindow itemSearchWindow;
+        
         private bool drawItemSearchWindow;
 
         private bool drawConfigWindow;
@@ -55,11 +35,42 @@ namespace ItemSearchPlugin {
         internal List<GenericItem> LuminaItems { get; set; }
         internal ClientLanguage LuminaItemsClientLanguage { get; set; }
         
-        public static DataSite[] DataSites { get; private set; } = new DataSite[] { new GarlandToolsDataSite() }; 
-        public string Version { get; private set; }
+        public static DataSite[] DataSites { get; private set; } = { new GarlandToolsDataSite() }; 
+        public string Version { get; }
+        
+        public ItemSearchPlugin(DalamudPluginInterface pluginInterface)
+        {
+            pluginInterface.Create<Service>();
+            
+            Service.Configuration = (ItemSearchPluginConfig) pluginInterface.GetPluginConfig() ?? new ItemSearchPluginConfig();
+            Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
+
+            DataSites = new DataSite[] {
+                new GarlandToolsDataSite(),
+                new TeamcraftDataSite(),
+                new GamerEscapeDatasite(),
+            };
+            
+            Service.Configuration.ReloadLocalization();
+
+
+            var address = new AddressResolver();
+            address.Setup(Service.SigScanner);
+
+            var gameFunctions = new GameFunctions(address);
+            TryOn = new TryOn(gameFunctions);
+            CraftingRecipeFinder = new CraftingRecipeFinder(address);
+
+            Service.PluginInterface.UiBuilder.Draw += this.BuildUI;
+            SetupCommands();
+
+#if DEBUG
+            OnItemSearchCommand("", "");
+#endif
+        }
 
         public void Dispose() {
-            PluginInterface.UiBuilder.Draw -= this.BuildUI;
+            Service.PluginInterface.UiBuilder.Draw -= this.BuildUI;
             CraftingRecipeFinder?.Dispose();
             itemSearchWindow?.Dispose();
             TryOn?.Dispose();
@@ -73,73 +84,33 @@ namespace ItemSearchPlugin {
             textureDictionary.Clear();
         }
 
-        public ItemSearchPlugin() {
-            Version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-            this.PluginConfig = (ItemSearchPluginConfig) PluginInterface.GetPluginConfig() ?? new ItemSearchPluginConfig();
 
-            ItemSearchPlugin.DataSites = new DataSite[] {
-                new GarlandToolsDataSite(),
-                new TeamcraftDataSite(PluginConfig),
-                new GamerEscapeDatasite(),
-            };
-
-            this.PluginConfig.Init(PluginInterface, this);
-
-
-            SetupGameFunctions();
-
-            ReloadLocalization();
-            
-            TryOn = new TryOn(this);
-
-            CraftingRecipeFinder = new CraftingRecipeFinder(this);
-
-            PluginInterface.UiBuilder.Draw += this.BuildUI;
-            SetupCommands();
-
-#if DEBUG
-            OnItemSearchCommand("", "");
-#endif
-        }
-
-        public void ReloadLocalization() {
-            if (!string.IsNullOrEmpty(PluginConfig.Language)) {
-                Loc.LoadLanguage(PluginConfig.Language);
-            } else {
-                Loc.LoadDefaultLanguage();
-            }
-        }
-
-
-        public void SetupCommands() {
-            CommandManager.AddHandler("/xlitem", new Dalamud.Game.Command.CommandInfo(OnItemSearchCommand) {
+        private void SetupCommands() {
+            Service.CommandManager.AddHandler("/xlitem", new Dalamud.Game.Command.CommandInfo(OnItemSearchCommand) {
                 HelpMessage = Loc.Localize("ItemSearchCommandHelp", "Open a window you can use to link any specific item to chat."),
                 ShowInHelp = true
             });
         }
 
-        public void OnItemSearchCommand(string command, string args) {
+        private void OnItemSearchCommand(string command, string args) {
             itemSearchWindow?.Dispose();
             itemSearchWindow = new ItemSearchWindow(this, args);
             drawItemSearchWindow = true;
         }
 
-        public void RemoveCommands() {
-            CommandManager.RemoveHandler("/xlitem");
+        private void RemoveCommands() {
+            Service.CommandManager.RemoveHandler("/xlitem");
 #if DEBUG
             CommandManager.RemoveHandler("/itemsearchdumploc");
 #endif
         }
-
-
-
-        private Stopwatch debugStopwatch = new Stopwatch();
+        
         private void BuildUI() {
 
             if (drawItemSearchWindow) {
 
                 drawItemSearchWindow = itemSearchWindow != null && itemSearchWindow.Draw();
-                drawConfigWindow = drawItemSearchWindow && drawConfigWindow && PluginConfig.DrawConfigUI();
+                drawConfigWindow = drawItemSearchWindow && drawConfigWindow && Service.Configuration.DrawConfigUi();
 
                 if (drawItemSearchWindow == false) {
                     itemSearchWindow?.Dispose();
@@ -147,9 +118,6 @@ namespace ItemSearchPlugin {
                     drawConfigWindow = false;
                 }
             }
-
-
-            debugStopwatch.Restart();
         }
 
         internal void LinkItem(GenericItem item) {
@@ -161,20 +129,20 @@ namespace ItemSearchPlugin {
             var payloadList = new List<Payload> {
                 new UIForegroundPayload((ushort) (0x223 + item.Rarity * 2)),
                 new UIGlowPayload((ushort) (0x224 + item.Rarity * 2)),
-                new ItemPayload(item.RowId, item.CanBeHq && KeyState[0x11]),
+                new ItemPayload(item.RowId, item.CanBeHq && Service.KeyState[0x11]),
                 new UIForegroundPayload(500),
                 new UIGlowPayload(501),
                 new TextPayload($"{(char) SeIconChar.LinkMarker}"),
                 new UIForegroundPayload(0),
                 new UIGlowPayload(0),
-                new TextPayload(item.Name + (item.CanBeHq && KeyState[0x11] ? $" {(char)SeIconChar.HighQuality}" : "")),
+                new TextPayload(item.Name + (item.CanBeHq && Service.KeyState[0x11] ? $" {(char)SeIconChar.HighQuality}" : "")),
                 new RawPayload(new byte[] {0x02, 0x27, 0x07, 0xCF, 0x01, 0x01, 0x01, 0xFF, 0x01, 0x03}),
                 new RawPayload(new byte[] {0x02, 0x13, 0x02, 0xEC, 0x03})
             };
 
             var payload = new SeString(payloadList);
 
-            Chat.PrintChat(new XivChatEntry {
+            Service.Chat.PrintChat(new XivChatEntry {
                 Message = payload
             });
         }
@@ -200,8 +168,8 @@ namespace ItemSearchPlugin {
 
                     Task.Run(() => {
                         try {
-                            var iconTex = Data.GetIcon(icon);
-                            var tex = PluginInterface.UiBuilder.LoadImageRaw(iconTex.GetRgbaImageData(), iconTex.Header.Width, iconTex.Header.Height, 4);
+                            var iconTex = Service.Data.GetIcon(icon);
+                            var tex = Service.PluginInterface.UiBuilder.LoadImageRaw(iconTex.GetRgbaImageData(), iconTex.Header.Width, iconTex.Header.Height, 4);
                             if (tex != null && tex.ImGuiHandle != IntPtr.Zero) {
                                 textureDictionary[icon] = tex;
                             }
@@ -212,7 +180,7 @@ namespace ItemSearchPlugin {
                 }
             } else {
                 ImGui.BeginChild("NoIcon", size, true);
-                if (PluginConfig.ShowItemID) {
+                if (Service.Configuration.ShowItemID) {
                     ImGui.Text(icon.ToString());
                 }
 
@@ -224,48 +192,5 @@ namespace ItemSearchPlugin {
             drawConfigWindow = !drawConfigWindow;
         }
 
-
-        private void SetupGameFunctions() {
-            cardUnlockedStatic = SigScanner.GetStaticAddressFromSig("48 8D 0D ?? ?? ?? ?? 45 33 C0 BA ?? ?? ?? ?? E8 ?? ?? ?? ?? 0F B6 93");
-            var cardUnlockedAddress = SigScanner.ScanText("E8 ?? ?? ?? ?? 8D 7B 78");
-            cardUnlocked = Marshal.GetDelegateForFunctionPointer<CardUnlockedDelegate>(cardUnlockedAddress);
-
-            // var itemActionUnlockedAddress = SigScanner.ScanText("E8 ?? ?? ?? ?? 84 C0 75 A9");
-            // itemActionUnlocked = Marshal.GetDelegateForFunctionPointer<ItemActionUnlockedDelegate>(itemActionUnlockedAddress);
-        }
-
-
-        private delegate byte ItemActionUnlockedDelegate(IntPtr data);
-        private delegate bool CardUnlockedDelegate(IntPtr a1, ushort card);
-
-        //private ItemActionUnlockedDelegate itemActionUnlocked;
-        private CardUnlockedDelegate cardUnlocked;
-        private IntPtr cardUnlockedStatic;
-
-        internal bool IsCardOwned(ushort cardId) {
-            return cardUnlocked(cardUnlockedStatic, cardId);
-        }
-
-        /* unsafe bool ItemActionUnlocked(Item item) {
-            var itemAction = item.ItemAction.Value;
-            if (itemAction == null) {
-                return false;
-            }
-
-            var type = itemAction.Type;
-
-            var mem = Marshal.AllocHGlobal(256);
-            *(uint*) (mem + 142) = itemAction.RowId;
-
-            if (type == 25183) {
-                *(uint*) (mem + 112) = item.AdditionalData;
-            }
-
-            var ret = this.itemActionUnlocked(mem) == 1;
-
-            Marshal.FreeHGlobal(mem);
-
-            return ret;
-        }*/
     }
 }
