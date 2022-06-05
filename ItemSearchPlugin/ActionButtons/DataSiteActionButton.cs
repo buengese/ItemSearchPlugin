@@ -2,11 +2,6 @@
 
 namespace ItemSearchPlugin.ActionButtons {
     class DataSiteActionButton : IActionButton {
-        private readonly ItemSearchPluginConfig pluginConfig;
-
-        public DataSiteActionButton(ItemSearchPluginConfig pluginConfig) {
-            this.pluginConfig = pluginConfig;
-        }
 
         public override ActionButtonPosition ButtonPosition => ActionButtonPosition.TOP;
 
@@ -15,16 +10,16 @@ namespace ItemSearchPlugin.ActionButtons {
         public override string GetButtonText(Item selectedItem) {
             return string.Format(
                 Loc.Localize("ItemSearchDataSiteViewButton", "View on {0}"),
-                Loc.Localize(pluginConfig.SelectedDataSite.NameTranslationKey, pluginConfig.SelectedDataSite.Name)
+                Loc.Localize(Service.Configuration.SelectedDataSite.NameTranslationKey, Service.Configuration.SelectedDataSite.Name)
             );
         }
 
         public override bool GetShowButton(Item selectedItem) {
-            return this.pluginConfig.SelectedDataSite != null;
+            return Service.Configuration.SelectedDataSite != null;
         }
 
         public override void OnButtonClicked(Item selectedItem) {
-            pluginConfig.SelectedDataSite.OpenItem(selectedItem);
+            Service.Configuration.SelectedDataSite.OpenItem(selectedItem);
         }
     }
 }

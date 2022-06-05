@@ -17,7 +17,6 @@ using Newtonsoft.Json;
 namespace ItemSearchPlugin.ActionButtons {
     public class FfxivStoreActionButton : IActionButton {
 
-        private static ItemSearchPluginConfig _pluginConfig;
         private static Dictionary<uint, List<uint>> StoreItems = new();
         private static Dictionary<uint, Product> StoreProducts = new();
 
@@ -36,7 +35,7 @@ namespace ItemSearchPlugin.ActionButtons {
                 _updateCancellationToken = null;
             }
 
-            if (!_pluginConfig.EnableFFXIVStore) return;
+            if (!Service.Configuration.EnableFFXIVStore) return;
             _updateCancellationToken = new CancellationTokenSource();
             _storeUpdateTask = Task.Run(UpdateTask, _updateCancellationToken.Token);
         }
@@ -99,10 +98,10 @@ namespace ItemSearchPlugin.ActionButtons {
             PluginLog.Log($"Got Store Product List: {productList.Products.Count}");
             StoreItems.Clear();
 
-            var storeProductCacheDirectory = Path.Combine(ItemSearchPlugin.PluginInterface.GetPluginConfigDirectory(), "FFXIV Store Cache");
+            var storeProductCacheDirectory = Path.Combine(Service.PluginInterface.GetPluginConfigDirectory(), "FFXIV Store Cache");
             Directory.CreateDirectory(storeProductCacheDirectory);
 
-            var allItems = ItemSearchPlugin.Data.Excel.GetSheet<Item>(Language.English);
+            var allItems = Service.Data.Excel.GetSheet<Item>(Language.English);
             if (allItems == null) {
                 UpdateStatus = "[Error] " + UpdateStatus;;
                 return;
@@ -180,8 +179,7 @@ namespace ItemSearchPlugin.ActionButtons {
         }
 
 
-        public FfxivStoreActionButton(ItemSearchPluginConfig pluginConfig) {
-            _pluginConfig = pluginConfig;
+        public FfxivStoreActionButton() {
             if (StoreItems.Count <= 0) BeginUpdate();
         }
 
@@ -210,7 +208,7 @@ namespace ItemSearchPlugin.ActionButtons {
                 ImGui.End();
             }
 
-            if (!isPopupOpen) ItemSearchPlugin.PluginInterface.UiBuilder.Draw -= DrawProductSelection;
+            if (!isPopupOpen) Service.PluginInterface.UiBuilder.Draw -= DrawProductSelection;
 
         }
 
@@ -229,19 +227,19 @@ namespace ItemSearchPlugin.ActionButtons {
             productSelectionList = storeItems;
             productSelectionPosition = ImGui.GetIO().MousePos;
             productSelectionButtonSize = Vector2.Zero;
-            ItemSearchPlugin.PluginInterface.UiBuilder.Draw -= DrawProductSelection;
-            ItemSearchPlugin.PluginInterface.UiBuilder.Draw += DrawProductSelection;
+            Service.PluginInterface.UiBuilder.Draw -= DrawProductSelection;
+            Service.PluginInterface.UiBuilder.Draw += DrawProductSelection;
         }
 
         public override bool GetShowButton(Item selectedItem) {
-            if (!_pluginConfig.EnableFFXIVStore) return false;
+            if (!Service.Configuration.EnableFFXIVStore) return false;
             return StoreItems.ContainsKey(selectedItem.RowId);
         }
 
         public override ActionButtonPosition ButtonPosition => ActionButtonPosition.TOP;
 
         public override void Dispose() {
-            ItemSearchPlugin.PluginInterface.UiBuilder.Draw -= DrawProductSelection;
+            Service.PluginInterface.UiBuilder.Draw -= DrawProductSelection;
             if (_storeUpdateTask != null) {
                 _updateCancellationToken.Cancel();
                 _storeUpdateTask.Wait();

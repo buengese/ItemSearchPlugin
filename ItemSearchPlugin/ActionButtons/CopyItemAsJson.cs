@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using ImGuiNET;
 using Lumina.Excel.GeneratedSheets;
@@ -6,11 +7,6 @@ using Newtonsoft.Json;
 
 namespace ItemSearchPlugin.ActionButtons {
     class CopyItemAsJson : IActionButton {
-        private readonly ItemSearchPlugin plugin;
-
-        public CopyItemAsJson(ItemSearchPlugin plugin) {
-            this.plugin = plugin;
-        }
 
         public override ActionButtonPosition ButtonPosition => ActionButtonPosition.TOP;
 
@@ -40,7 +36,7 @@ namespace ItemSearchPlugin.ActionButtons {
 
             
 
-            var recipes = ItemSearchPlugin.Data.GetExcelSheet<Recipe>().Where(a => a.ItemResult.Row == selectedItem.RowId).ToList();
+            var recipes = Service.Data.GetExcelSheet<Recipe>()?.Where(a => a.ItemResult.Row == selectedItem.RowId).ToList() ?? new List<Recipe>();
 
             if (recipes.Count == 0) {
                 sb.Append("Recipes: NONE");
@@ -52,7 +48,7 @@ namespace ItemSearchPlugin.ActionButtons {
                     sb.AppendLine("    Ingredients:");
                     foreach (var ri in r.UnkData5) {
 
-                        sb.AppendLine($"      [{ri.ItemIngredient}*{ri.AmountIngredient}] {ItemSearchPlugin.Data.GetExcelSheet<Item>().GetRow((uint) ri.ItemIngredient).Name} x {ri.AmountIngredient}");
+                        sb.AppendLine($"      [{ri.ItemIngredient}*{ri.AmountIngredient}] {Service.Data.GetExcelSheet<Item>()?.GetRow((uint) ri.ItemIngredient)?.Name} x {ri.AmountIngredient}");
 
 
                     } 
