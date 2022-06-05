@@ -75,34 +75,24 @@ namespace ItemSearchPlugin {
         /// <summary>
         /// True if the filter is not disabled.
         /// </summary>
-        public bool IsEnabled => !this.CanBeDisabled || !this.PluginConfig.DisabledFilters.Contains(this.NameLocalizationKey);
+        public bool IsEnabled => !this.CanBeDisabled || !Service.Configuration.DisabledFilters.Contains(this.NameLocalizationKey);
 
         /// <summary>
         /// True if the filter should be shown in the "Enabled Filters" section of config.
         /// </summary>
         public virtual bool CanBeDisabled => true;
-
-        protected ItemSearchPluginConfig PluginConfig;
-
-        [SuppressMessage("ReSharper", "VirtualMemberCallInConstructor")]
-        protected SearchFilter(ItemSearchPluginConfig config) {
-            this.PluginConfig = config;
-        }
-
+        
         internal void ConfigSetup() {
             (string l, string e) a = (NameLocalizationKey, Name);
-            if (CanBeDisabled && !PluginConfig.FilterNames.Contains(a)) {
-                PluginConfig.FilterNames.Add(a);
+            if (CanBeDisabled && !Service.Configuration.FilterNames.Contains(a)) {
+                Service.Configuration.FilterNames.Add(a);
             }
         }
 
         public virtual bool IsFromTag => false;
         public virtual bool GreyWithTags => true;
 
-        public virtual bool ParseTag(string tag) => false;
-
-        public virtual void ClearTags() { }
-
+        
         /// <summary>
         /// Called when the filter is hidden using the config menu.
         /// </summary>

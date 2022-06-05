@@ -14,8 +14,6 @@ using Lumina.Excel.GeneratedSheets;
 
 namespace ItemSearchPlugin.Filters {
     class SoldByNPCSearchFilter : SearchFilter {
-        private readonly DataManager data;
-
         private readonly HashSet<uint> soldForAnything = new HashSet<uint>();
         private readonly Dictionary<uint, HashSet<uint>> soldForCurrency = new Dictionary<uint, HashSet<uint>>();
         
@@ -34,7 +32,6 @@ namespace ItemSearchPlugin.Filters {
             public string Name = string.Empty;
             public List<CurrencyOption> SubOptions = new List<CurrencyOption>();
             public bool HideIfEmpty = true;
-            public string Tag;
         }
 
         private uint[] beastTribeCurrencies;
@@ -42,15 +39,10 @@ namespace ItemSearchPlugin.Filters {
         private bool ready;
         private bool error;
 
-        private readonly CurrencyOption notSoldByNpcOption;
-        private readonly CurrencyOption soldByAnyNpcOption;
 
-
-        public SoldByNPCSearchFilter(ItemSearchPluginConfig config, DataManager dataManager) : base(config) {
-            this.data = dataManager;
-
-            notSoldByNpcOption = new CurrencyOption {Invert = true, Name = "Not sold by NPC", ItemHashSet = soldForAnything, HideIfEmpty = false};
-            soldByAnyNpcOption = new CurrencyOption {Name = "Any Currency", ItemHashSet = soldForAnything, HideIfEmpty = false};
+        public SoldByNPCSearchFilter() {
+            var notSoldByNpcOption = new CurrencyOption {Invert = true, Name = "Not sold by NPC", ItemHashSet = soldForAnything, HideIfEmpty = false};
+            var soldByAnyNpcOption = new CurrencyOption {Name = "Any Currency", ItemHashSet = soldForAnything, HideIfEmpty = false};
 
 
             availableOptions.Add(null); // Not Selected Option
@@ -64,7 +56,6 @@ namespace ItemSearchPlugin.Filters {
             availableOptions.Add(new CurrencyOption {
                 Name = "Grand Company Seals",
                 ItemHashSet = soldForCurrency[(uint)SpecialCurrency.GrandCompany],
-                Tag = "gc",
                 SubOptions = GetGrandCompanyCurrencies()
             });
 
@@ -72,7 +63,6 @@ namespace ItemSearchPlugin.Filters {
             availableOptions.Add(new CurrencyOption {
                 Name = "Beast Tribe Currencies",
                 ItemHashSet = soldForCurrency[(uint)SpecialCurrency.BeastTribe],
-                Tag = "beasttribe",
                 SubOptions = GetBeastTribeCurrencies()
             });
 
@@ -82,23 +72,23 @@ namespace ItemSearchPlugin.Filters {
 
             Task.Run(() => {
                 try {
-                    foreach (var gilShopItem in dataManager.Excel.GetSheet<GilShopItem>()) {
+                    foreach (var gilShopItem in Service.Data.Excel.GetSheet<GilShopItem>()) {
                         if (!soldForAnything.Contains(gilShopItem.Item.Row)) soldForAnything.Add(gilShopItem.Item.Row);
                         if (!soldForCurrency[1].Contains(gilShopItem.Item.Row)) soldForCurrency[1].Add(gilShopItem.Item.Row);
                     }
 
-                    foreach (var gcScripShopItem in dataManager.Excel.GetSheet<GCScripShopItem>()) {
+                    foreach (var gcScripShopItem in Service.Data.Excel.GetSheet<GCScripShopItem>()) {
                         if (!soldForAnything.Contains(gcScripShopItem.Item.Row)) soldForAnything.Add(gcScripShopItem.Item.Row);
                         if (!soldForCurrency[(uint)SpecialCurrency.GrandCompany].Contains(gcScripShopItem.Item.Row)) soldForCurrency[(uint)SpecialCurrency.GrandCompany].Add(gcScripShopItem.Item.Row);
 
-                        var gcScripShopCategory = data.Excel.GetSheet<GCScripShopCategory>().GetRow(gcScripShopItem.RowId);
+                        var gcScripShopCategory = Service.Data.Excel.GetSheet<GCScripShopCategory>().GetRow(gcScripShopItem.RowId);
                         if (gcScripShopCategory == null) continue;
                         var grandCompanyID = gcScripShopCategory.GrandCompany.Row;
                         if (grandCompanyID < 1 || grandCompanyID > 3) continue;
                         if (!soldForCurrency[19 + grandCompanyID].Contains(gcScripShopItem.Item.Row)) soldForCurrency[19 + grandCompanyID].Add(gcScripShopItem.Item.Row);
                     }
 
-                    foreach (var specialShop in dataManager.Excel.GetSheet<SpecialShopCustom>()) {
+                    foreach (var specialShop in Service.Data.Excel.GetSheet<SpecialShopCustom>()) {
                         foreach (var entry in specialShop.Entries) {
                             foreach (var c in entry.Cost) {
                                 if (!soldForCurrency.ContainsKey(c.Item.Row)) continue;
@@ -143,8 +133,8 @@ namespace ItemSearchPlugin.Filters {
         private List<CurrencyOption> GetBeastTribeCurrencies() {
             var l = new List<CurrencyOption>() {null};
             var a = new List<uint>();
-            var btSheet = data.Excel.GetSheet<BeastTribe>();
-            foreach (var bt in data.Excel.GetSheet<BeastTribe>()) {
+            var btSheet = Service.Data.Excel.GetSheet<BeastTribe>();
+            foreach (var bt in Service.Data.Excel.GetSheet<BeastTribe>()) {
                 if (bt.CurrencyItem.Row == 0) continue;
                 var co = GetCurrencyOption(bt.CurrencyItem.Row, bt.Name);
                 if (co == null) continue;
@@ -165,7 +155,7 @@ namespace ItemSearchPlugin.Filters {
 
         private List<CurrencyOption> GetGrandCompanyCurrencies() {
             var l = new List<CurrencyOption>() {null};
-            foreach (var gc in data.Excel.GetSheet<GrandCompany>()) {
+            foreach (var gc in Service.Data.Excel.GetSheet<GrandCompany>()) {
                 if (gc.RowId == 0) continue;
                 var co = GetCurrencyOption(19 + gc.RowId, gc.Name, gc.Name);
                 if (co == null) continue;
@@ -179,12 +169,20 @@ namespace ItemSearchPlugin.Filters {
                 if (!soldForCurrency.ContainsKey(itemId)) {
                     soldForCurrency.Add(itemId, new HashSet<uint>());
                 }
-                var sheet = data.Excel.GetSheet<Item>();
+                var sheet = Service.Data.Excel.GetSheet<Item>();
                 var item = sheet.GetRow(itemId);
                 if (item == null) {
-                    return new CurrencyOption() {Name = forceName ?? itemId.ToString(), ItemHashSet = soldForCurrency[itemId], Tag = tag?.ToLower()};
+                    return new CurrencyOption()
+                    {
+                        Name = forceName ?? itemId.ToString(), 
+                        ItemHashSet = soldForCurrency[itemId]
+                    };
                 }
-                return new CurrencyOption() {Name = forceName ?? item.Name, ItemHashSet = soldForCurrency[itemId], Tag = tag?.ToLower()};
+                return new CurrencyOption()
+                {
+                    Name = forceName ?? item.Name,
+                    ItemHashSet = soldForCurrency[itemId]
+                };
             } catch (Exception ex) {
                 PluginLog.Log($"Failed to get Currency Option for {itemId}");
                 PluginLog.LogError($"{ex}");
@@ -231,7 +229,7 @@ namespace ItemSearchPlugin.Filters {
                 ImGui.Text("Loading...");
                 return;
             }
-            ImGui.BeginChild($"###{NameLocalizationKey}Child", new Vector2(-1, 23 * ImGui.GetIO().FontGlobalScale), false, usingTags ? ImGuiWindowFlags.NoInputs : ImGuiWindowFlags.None);
+            ImGui.BeginChild($"###{NameLocalizationKey}Child", new Vector2(-1, 23 * ImGui.GetIO().FontGlobalScale), false, ImGuiWindowFlags.None);
 
             if (selectedCurrencyOption != null && selectedCurrencyOption.SubOptions.Count > 0) {
                 ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionWidth() / 2);
@@ -271,67 +269,6 @@ namespace ItemSearchPlugin.Filters {
 
 
             ImGui.EndChild();
-        }
-
-        private bool usingTags;
-        
-        private CurrencyOption nonTagSelection;
-        private CurrencyOption nonTagSubSelection;
-        
-        public override void ClearTags() {
-            if (usingTags) {
-                selectedCurrencyOption = nonTagSelection;
-                selectedSubOption = nonTagSubSelection;
-                usingTags = false;
-            }
-        }
-
-        public override bool IsFromTag => usingTags;
-
-        public override bool ParseTag(string tag) {
-            var t = tag.ToLower().Trim();
-
-            var split = t.Split(':');
-            split[0] = split[0].Replace(" ", "").Trim();
-
-            if (split[0] != "soldbynpc" && split[0] != "notsoldbynpc") return false;
-
-            Modified = true;
-            if (!usingTags) {
-                nonTagSelection = selectedCurrencyOption;
-                nonTagSubSelection = selectedSubOption;
-                usingTags = true;
-            }
-
-            if (split[0].StartsWith("not")) {
-                selectedCurrencyOption = notSoldByNpcOption;
-                selectedSubOption = null;
-                return true;
-            }
-
-            if (split.Length > 1) {
-                foreach (var o in availableOptions) {
-                    if (o == null) continue;
-                    if (o.Tag == split[1]) {
-                        selectedCurrencyOption = o;
-                        return true;
-                    }
-
-                    if (o.SubOptions == null) continue;
-                    foreach (var so in o.SubOptions) {
-                        if (so == null) continue;
-                        if (so.Tag != split[1]) continue;
-                        selectedCurrencyOption = o;
-                        selectedSubOption = so;
-                        return true;
-                    }
-                }
-            }
-
-            selectedCurrencyOption = soldByAnyNpcOption;
-            selectedSubOption = null;
-            return true;
-
         }
         
     }

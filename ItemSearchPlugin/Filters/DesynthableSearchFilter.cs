@@ -1,6 +1,8 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using System.Threading.Tasks;
 using Dalamud.Data;
+using Dalamud.Logging;
 using ImGuiNET;
 using Lumina.Excel.GeneratedSheets;
 
@@ -11,11 +13,8 @@ namespace ItemSearchPlugin.Filters {
         private readonly string[] options;
 
         private bool finishedLoading = false;
-
-        private DataManager data;
-
-        public DesynthableSearchFilter(ItemSearchPluginConfig pluginConfig, DataManager data) : base(pluginConfig) {
-            this.data = data;
+        
+        public DesynthableSearchFilter() {
             string craftableJobFormat = Loc.Localize("DesynthableJobFormat", "Desynthable: {0}");
 
             options = new string[11];
@@ -25,12 +24,21 @@ namespace ItemSearchPlugin.Filters {
             options[2] = string.Format(craftableJobFormat, Loc.Localize("SearchFilterAny", "Any"));
             
             Task.Run(() => {
-                var cj = data.GetExcelSheet<ClassJob>();
-                
-                for (uint i = 0; i < 8; i++) {
-                    var job = cj.GetRow(i + 8);
-                    options[3 + i] = string.Format(craftableJobFormat, job.Abbreviation);
+                var cj = Service.Data.GetExcelSheet<ClassJob>();
+
+                try
+                {
+                    for (uint i = 0; i < 8; i++)
+                    {
+                        var job = cj!.GetRow(i + 8);
+                        options[3 + i] = string.Format(craftableJobFormat, job!.Abbreviation);
+                    }
                 }
+                catch (NullReferenceException ex)
+                {
+                    PluginLog.Error(ex, "DesynthableSearchFilter failed load.");
+                }
+
 
                 finishedLoading = true;
                 Modified = true;
@@ -64,77 +72,13 @@ namespace ItemSearchPlugin.Filters {
         }
 
         public override void DrawEditor() {
-            ImGui.BeginChild($"###{NameLocalizationKey}Child", new Vector2(-1, 23 * ImGui.GetIO().FontGlobalScale), false, usingTags ? ImGuiWindowFlags.NoInputs : ImGuiWindowFlags.None);
+            ImGui.BeginChild($"###{NameLocalizationKey}Child", new Vector2(-1, 23 * ImGui.GetIO().FontGlobalScale), false, ImGuiWindowFlags.None);
             ImGui.SetNextItemWidth(-1);
             if (ImGui.Combo("###desynthableSearchFilter_selection", ref selectedOption, options, options.Length, 14)) {
                 Modified = true;
             }
             ImGui.EndChild();
         }
-
-
-
-
-        private bool usingTags = false;
-
-        private int nonTagSelection;
-
-        public override void ClearTags() {
-            if (usingTags) {
-                selectedOption = nonTagSelection;
-                usingTags = false;
-            }
-        }
-
-        public override bool IsFromTag => usingTags;
-
-        public override bool ParseTag(string tag) {
-            var t = tag.ToLower().Trim();
-
-            var split = t.Split(':');
-            split[0] = split[0].Trim();
-
-            if (split[0].StartsWith("desy")  || split[0].StartsWith("not desy")) {
-                Modified = true;
-                if (!usingTags) {
-                    nonTagSelection = selectedOption;
-                    usingTags = true;
-                }
-
-                if (split[0].StartsWith("not")) {
-                    selectedOption = 1;
-                    return true;
-                }
-
-                if (split.Length > 1) {
-                    split[1] = split[1].Trim();
-                    var cj = data.GetExcelSheet<ClassJob>();
-
-                    for (uint i = 0; i < 8; i++) {
-                        var job = cj.GetRow(i + 8);
-                        if (job.Abbreviation.ToString().ToLower() == split[1] || job.Name.ToString().ToLower() == split[1]) {
-                            selectedOption = (int)(3 + i);
-                            return true;
-                        }
-                    }
-
-                    usingTags = false;
-                    return false;
-
-
-
-                } else {
-                    selectedOption = 2;
-                    return true;
-                }
-
-            }
-
-            return false;
-        }
-
-
-
 
         public override string ToString() {
             return options[selectedOption].Replace("Desynthable: ", "");

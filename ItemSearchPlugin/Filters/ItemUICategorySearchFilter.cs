@@ -12,7 +12,7 @@ namespace ItemSearchPlugin.Filters {
         public override string Name => "Category";
         public override string NameLocalizationKey => "DalamudItemSelectCategory";
 
-        public override bool IsSet => (usingTag ? taggedCategory : selectedCategory) != 0;
+        public override bool IsSet => selectedCategory != 0;
 
         public override bool HasChanged {
             get {
@@ -34,30 +34,22 @@ namespace ItemSearchPlugin.Filters {
         private bool focused;
         private readonly Vector2 popupSize = new Vector2(-1, 120);
 
-        public ItemUICategorySearchFilter(ItemSearchPluginConfig config, DataManager data) : base(config) {
+        public ItemUICategorySearchFilter() {
             uiCategories = new List<ItemUICategory> {null};
-            uiCategories.AddRange(data.GetExcelSheet<ItemUICategory>().ToList().Where(x => !string.IsNullOrEmpty(x.Name)).OrderBy(x => x.Name.ToString()));
+            uiCategories.AddRange(Service.Data.GetExcelSheet<ItemUICategory>().ToList().Where(x => !string.IsNullOrEmpty(x.Name)).OrderBy(x => x.Name.ToString()));
             string nullName = Loc.Localize("ItemUiCategorySearchFilterAll", "All");
             uiCategoriesArray = uiCategories.Select(x => x == null ? nullName : x.Name.ToString().Replace("\u0002\u001F\u0001\u0003", "-")).ToArray();
         }
 
 
         public override bool CheckFilter(Item item) {
-            return item.ItemUICategory.Row == uiCategories[usingTag ? taggedCategory : selectedCategory].RowId;
+            return item.ItemUICategory.Row == uiCategories[selectedCategory].RowId;
         }
 
         public override void DrawEditor() {
             ImGui.PushItemWidth(-1);
-            if (usingTag) {
-                var str = uiCategoriesArray[taggedCategory];
-                ImGui.InputText("##ItemUiCategorySearchFilterBox", ref str, 100, ImGuiInputTextFlags.ReadOnly);
-                ImGui.PopItemWidth();
-                return;
-            }
 
-
-            
-            if (ImGui.BeginCombo("##ItemUiCategorySearchFilterBox", uiCategoriesArray[usingTag ? this.taggedCategory : this.selectedCategory])) {
+            if (ImGui.BeginCombo("##ItemUiCategorySearchFilterBox", uiCategoriesArray[selectedCategory])) {
                 ImGui.SetNextItemWidth(-1);
                 ImGui.InputTextWithHint("###ItemUiCategorySearchFilterFilter", "Filter", ref categorySearchInput,  60);
                 var isFocused = ImGui.IsItemActive();
@@ -100,36 +92,10 @@ namespace ItemSearchPlugin.Filters {
             
             ImGui.PopItemWidth();
         }
-
-        private bool usingTag = false;
-
-        public override bool IsFromTag => usingTag;
-
-        private int taggedCategory = 0;
-
-        public override void ClearTags() {
-            usingTag = false;
-            taggedCategory = 0;
-        }
-
-        public override bool ParseTag(string tag) {
-            var t = tag.Trim().ToLower();
-
-            for (var i = 1; i < uiCategoriesArray.Length; i++) {
-                var c = uiCategoriesArray[i];
-                if (c.ToLower() == t) {
-                    taggedCategory = i;
-                    usingTag = true;
-                    Modified = true;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
+        
+        
         public override string ToString() {
-            return uiCategoriesArray[usingTag ? taggedCategory : selectedCategory];
+            return uiCategoriesArray[selectedCategory];
         }
     }
 }

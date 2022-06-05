@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using Dalamud.Data;
+using Dalamud.Logging;
 using ImGuiNET;
 using Lumina.Excel.GeneratedSheets;
 
@@ -15,13 +17,10 @@ namespace ItemSearchPlugin.Filters {
         private readonly Dictionary<uint, RecipeLookup> craftableItems;
 
         private bool finishedLoading = false;
-
-        private DataManager data;
-
-        public CraftableSearchFilter(ItemSearchPluginConfig pluginConfig, DataManager data) : base(pluginConfig) {
+        
+        public CraftableSearchFilter() {
             this.craftableItems = new Dictionary<uint, RecipeLookup>();
-            this.data = data;
-            string craftableJobFormat = Loc.Localize("CraftableJobFormat", "Craftable: {0}");
+            var craftableJobFormat = Loc.Localize("CraftableJobFormat", "Craftable: {0}");
 
             options = new string[11];
 
@@ -30,15 +29,24 @@ namespace ItemSearchPlugin.Filters {
             options[2] = string.Format(craftableJobFormat, Loc.Localize("SearchFilterAny", "Any"));
             
             Task.Run(() => {
-                var cj = data.GetExcelSheet<ClassJob>();
-                
-                for (uint i = 0; i < 8; i++) {
-                    var job = cj.GetRow(i + 8);
-                    options[3 + i] = string.Format(craftableJobFormat, job.Abbreviation);
-                }
+                var cj = Service.Data.GetExcelSheet<ClassJob>();
 
-                foreach (var recipeLookup in data.GetExcelSheet<RecipeLookup>()) {
-                    craftableItems.Add(recipeLookup.RowId, recipeLookup);
+                try
+                {
+                    for (uint i = 0; i < 8; i++)
+                    {
+                        var job = cj!.GetRow(i + 8);
+                        options[3 + i] = string.Format(craftableJobFormat, job!.Abbreviation);
+                    }
+
+                    foreach (var recipeLookup in Service.Data.GetExcelSheet<RecipeLookup>()!)
+                    {
+                        craftableItems.Add(recipeLookup.RowId, recipeLookup);
+                    }
+                }
+                catch (NullReferenceException ex)
+                {
+                    PluginLog.Error(ex, "CraftableSearchFilter load failed");
                 }
 
                 finishedLoading = true;
@@ -73,7 +81,7 @@ namespace ItemSearchPlugin.Filters {
         }
 
         public override void DrawEditor() {
-            ImGui.BeginChild($"###{NameLocalizationKey}Child", new Vector2(-1, 23 * ImGui.GetIO().FontGlobalScale), false, usingTags ? ImGuiWindowFlags.NoInputs : ImGuiWindowFlags.None);
+            ImGui.BeginChild($"###{NameLocalizationKey}Child", new Vector2(-1, 23 * ImGui.GetIO().FontGlobalScale), false, ImGuiWindowFlags.None);
             ImGui.SetNextItemWidth(-1);
             if (ImGui.Combo("###craftableSearchFilter_selection", ref selectedOption, options, options.Length, 14)) {
                 Modified = true;
@@ -82,66 +90,7 @@ namespace ItemSearchPlugin.Filters {
         }
 
 
-        private bool usingTags = false;
-
-        private int nonTagSelection;
-
-        public override void ClearTags() {
-            if (usingTags) {
-                selectedOption = nonTagSelection;
-                usingTags = false;
-            }
-        }
-
-        public override bool IsFromTag => usingTags;
-
-        public override bool ParseTag(string tag) {
-            var t = tag.ToLower().Trim();
-
-            var split = t.Split(':');
-            split[0] = split[0].Trim();
-            
-            if (split[0] == "craftable" || split[0] == "not craftable") {
-                Modified = true;
-                if (!usingTags) {
-                    nonTagSelection = selectedOption;
-                    usingTags = true;
-                }
-
-                if (split[0] == "not craftable") {
-                    selectedOption = 1;
-                    return true;
-                }
-
-                if (split.Length > 1) {
-                    split[1] = split[1].Trim();
-                    var cj = data.GetExcelSheet<ClassJob>();
-
-                    for (uint i = 0; i < 8; i++) {
-                        var job = cj.GetRow(i + 8);
-                        if (job.Abbreviation.ToString().ToLower() == split[1] || job.Name.ToString().ToLower() == split[1]) {
-                            selectedOption = (int) (3 + i);
-                            return true;
-                        }
-                    }
-
-                    usingTags = false;
-                    return false;
-
-
-
-                } else {
-                    selectedOption = 2;
-                    return true;
-                }
-
-            }
-
-            return false;
-        }
-
-
-
+        
         public override string ToString() {
             return options[selectedOption].Replace("Craftable: ", "");
         }

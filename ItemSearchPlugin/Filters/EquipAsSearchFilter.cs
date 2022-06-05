@@ -18,11 +18,10 @@ namespace ItemSearchPlugin.Filters {
         private bool selectingClasses;
         private int selectedMode;
 
-        public EquipAsSearchFilter(ItemSearchPluginConfig config, DataManager data, DalamudPluginInterface pluginInterface) : base(config) {
-            this.pluginInterface = pluginInterface;
-            this.selectedClassJobs = new List<uint>();
-            this.classJobCategories = data.GetExcelSheet<ClassJobCategory>().ToList();
-            this.classJobs = data.GetExcelSheet<ClassJob>()
+        public EquipAsSearchFilter() {
+            selectedClassJobs = new List<uint>();
+            classJobCategories = Service.Data.GetExcelSheet<ClassJobCategory>().ToList();
+            classJobs = Service.Data.GetExcelSheet<ClassJob>()
                 .Where(cj => cj.RowId != 0)
                 .OrderBy(cj => {
                     return cj.Role switch {
@@ -116,18 +115,13 @@ namespace ItemSearchPlugin.Filters {
             }
 
             ImGui.SameLine();
-
-            if (usingTags) {
-                ImGui.Text(SelectedClassString());
-            }
-
-
-            if (usingTags == false && ImGui.SmallButton($"{(selectingClasses ? Loc.Localize("EquipAsSearchFilterFinishedSelectingClasses", "Done") : SelectedClassString())}###equipAsChangeClassButton")) {
+            
+            if (ImGui.SmallButton($"{(selectingClasses ? Loc.Localize("EquipAsSearchFilterFinishedSelectingClasses", "Done") : SelectedClassString())}###equipAsChangeClassButton")) {
                 selectingClasses = !selectingClasses;
                 changed = true;
             }
 
-            if (usingTags == false && selectingClasses) {
+            if (selectingClasses) {
                 float wWidth = ImGui.GetWindowWidth();
 
                 float firstColumnWith = ImGui.GetColumnWidth(0);
@@ -182,55 +176,16 @@ namespace ItemSearchPlugin.Filters {
 
                 ImGui.Columns(2);
                 ImGui.SetColumnWidth(0, firstColumnWith);
-            } else if(usingTags == false && ItemSearchPlugin.ClientState.LocalContentId != 0) {
+            } else if(Service.ClientState.LocalContentId != 0) {
                 ImGui.SameLine();
                 if (ImGui.SmallButton("Current Class")) {
-                    if (ItemSearchPlugin.ClientState?.LocalPlayer != null) {
+                    if (Service.ClientState?.LocalPlayer != null) {
                         selectedClassJobs.Clear();
-                        selectedClassJobs.Add(ItemSearchPlugin.ClientState.LocalPlayer.ClassJob.Id);
+                        selectedClassJobs.Add(Service.ClientState.LocalPlayer.ClassJob.Id);
                         changed = true;
                     }
                 }
             }
-        }
-
-
-        private bool usingTags = false;
-
-        private List<uint> nonTagSelection;
-
-        public override void ClearTags() {
-            if (usingTags) {
-                selectedClassJobs = nonTagSelection;
-                usingTags = false;
-            }
-        }
-
-        public override bool IsFromTag => usingTags;
-
-        public override bool ParseTag(string tag) {
-            var t = tag.ToLower().Trim();
-            var selfTag = false;
-            if (t == "self" && ItemSearchPlugin.ClientState?.LocalPlayer != null) {
-                t = ItemSearchPlugin.ClientState.LocalPlayer.ClassJob.GameData.Abbreviation.ToString().ToLower();
-                selfTag = true;
-            }
-
-            foreach (var bp in classJobs) {
-                if (bp.Abbreviation.ToString().ToLower() == t) {
-
-                    if (!usingTags) {
-                        nonTagSelection = selectedClassJobs;
-                        selectedClassJobs = new List<uint>();
-                    }
-
-                    usingTags = true;
-                    selectedClassJobs.Add(bp.RowId);
-                    return !selfTag;
-                }
-            }
-
-            return false;
         }
 
         public override bool GreyWithTags => false;

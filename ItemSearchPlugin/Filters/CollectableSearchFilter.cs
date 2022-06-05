@@ -24,27 +24,30 @@ namespace ItemSearchPlugin.Filters {
             UnownedCollectable
         }
 
-        private Mode SelectedMode = Mode.NotSelected;
-
-        public CollectableSearchFilter(ItemSearchPluginConfig config, ItemSearchPlugin plugin) : base(config) {
-            this.plugin = plugin;
-        }
+        private Mode selectedMode = Mode.NotSelected;
+        
+        private GameFunctions GameFunctions { get; }
+        
         public override string Name => "Collectable";
         public override string NameLocalizationKey => "CollectableSearchFilter";
-        public override bool IsSet => ItemSearchPlugin.ClientState.LocalContentId != 0 && SelectedMode != Mode.NotSelected;
-        public override bool ShowFilter => ItemSearchPlugin.ClientState.LocalContentId != 0 && base.ShowFilter;
+        public override bool IsSet => Service.ClientState.LocalContentId != 0 && selectedMode != Mode.NotSelected;
+        public override bool ShowFilter => Service.ClientState.LocalContentId != 0 && base.ShowFilter;
 
         private ushort[] collectableActionType = { 853, 1013, 1322, 2136, 2633, 3357, 4107, 25183, 20086 };
-        private ItemSearchPlugin plugin;
 
         private bool faultState = false;
 
+        public CollectableSearchFilter(GameFunctions gameFunctions)
+        {
+            this.GameFunctions = gameFunctions;
+        }
+
         public override bool CheckFilter(Item item) {
             if (faultState) return true;
-            if (SelectedMode == Mode.NotSelected) return true;
+            if (selectedMode == Mode.NotSelected) return true;
             var (isCollectable, isOwned) = GetCollectable(item);
 
-            return SelectedMode switch {
+            return selectedMode switch {
                 Mode.NotCollectable => !isCollectable,
                 Mode.AnyCollectable => isCollectable,
                 Mode.OwnedCollectable => isCollectable && isOwned,
@@ -53,7 +56,7 @@ namespace ItemSearchPlugin.Filters {
             };
         }
 
-        public (bool isCollectable, bool isOwned) GetCollectable(Item item) {
+        private (bool isCollectable, bool isOwned) GetCollectable(Item item) {
             
             var isCollectable = false;
             var isOwned = false;
@@ -62,11 +65,11 @@ namespace ItemSearchPlugin.Filters {
             if (item.ItemAction == null || item.ItemAction.Row == 0) return (false, false);
 
             var actionId = item.ItemAction.Row;
-            var actionType = item.ItemAction.Value.Type;
+            var actionType = item.ItemAction.Value?.Type ?? ushort.MaxValue;
             
             if (collectableActionType.Contains(actionType)) {
                 isCollectable = true;
-                isOwned = actionType == 3357 && plugin.IsCardOwned((ushort) item.AdditionalData);
+                isOwned = actionType == 3357 && GameFunctions.IsCardOwned((ushort) item.AdditionalData);
             }
 
             return (isCollectable, isOwned);
@@ -75,10 +78,10 @@ namespace ItemSearchPlugin.Filters {
 
         public override void DrawEditor() {
             ImGui.SetNextItemWidth(-1);
-            if (ImGui.BeginCombo("###CollectableSearchFilterCombo", SelectedMode.DescriptionAttr())) {
+            if (ImGui.BeginCombo("###CollectableSearchFilterCombo", selectedMode.DescriptionAttr())) {
                 foreach (var v in Enum.GetValues(typeof(Mode))) {
-                    if (ImGui.Selectable(v.DescriptionAttr(), SelectedMode == (Mode) v)) {
-                        SelectedMode = (Mode) v;
+                    if (ImGui.Selectable(v.DescriptionAttr(), selectedMode == (Mode) v)) {
+                        selectedMode = (Mode) v;
                         Modified = true;
                     }
                 }

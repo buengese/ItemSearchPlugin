@@ -12,7 +12,7 @@ namespace ItemSearchPlugin.Filters {
         private string lastSearchText;
         private string[] searchTokens;
 
-        public ItemNameSearchFilter(ItemSearchPluginConfig config, ItemSearchWindow window, string startingValue = "") : base(config) {
+        public ItemNameSearchFilter(ItemSearchWindow window, string startingValue = "") {
             searchText = startingValue;
             lastSearchText = string.Empty;
         }
@@ -76,7 +76,7 @@ namespace ItemSearchPlugin.Filters {
 
         public override void DrawEditor() {
             ImGui.SetNextItemWidth(-20 * ImGui.GetIO().FontGlobalScale);
-            if (PluginConfig.AutoFocus && ImGui.IsWindowAppearing()) {
+            if (Service.Configuration.AutoFocus && ImGui.IsWindowAppearing()) {
                 ImGui.SetKeyboardFocusHere();
             }
             ImGui.InputText("##ItemNameSearchFilter", ref searchText, 256);

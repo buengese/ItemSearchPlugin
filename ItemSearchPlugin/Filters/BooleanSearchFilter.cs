@@ -35,7 +35,7 @@ namespace ItemSearchPlugin.Filters {
 
         private static float _trueWidth;
 
-        public BooleanSearchFilter(ItemSearchPluginConfig pluginConfig, string name, string trueString, string falseString, Func<Item, bool, bool, bool> checkFunction, Func<EventItem, bool, bool, bool> keyCheckFunction = null) : base(pluginConfig) {
+        public BooleanSearchFilter(string name, string trueString, string falseString, Func<Item, bool, bool, bool> checkFunction, Func<EventItem, bool, bool, bool> keyCheckFunction = null) {
             this.Name = name;
             this.trueString = trueString;
             this.falseString = falseString;
@@ -45,7 +45,7 @@ namespace ItemSearchPlugin.Filters {
 
         public override string Name { get; }
 
-        public override bool ShowFilter => ItemSearchPlugin.ClientState.LocalContentId != 0 && base.ShowFilter;
+        public override bool ShowFilter => Service.ClientState.LocalContentId != 0 && base.ShowFilter;
 
         public override string NameLocalizationKey => $"{Name}SearchFilter";
         public override bool IsSet => usingTag || showTrue == false || showFalse == false;
@@ -99,34 +99,6 @@ namespace ItemSearchPlugin.Filters {
 
         public override void Hide() {
             _trueWidth = 0;
-        }
-
-        public override void ClearTags() {
-            usingTag = false;
-        }
-
-        public override bool IsFromTag => usingTag;
-
-        public override bool ParseTag(string tag) {
-            var t = tag.ToLower().Trim();
-
-            if (t == $"not {Name}".ToLower()) {
-                taggedFalse = true;
-                taggedTrue = false;
-                usingTag = true;
-                Modified = true;
-                return true;
-            }
-
-            if (t == $"{Name}".ToLower()) {
-                taggedFalse = false;
-                taggedTrue = true;
-                usingTag = true;
-                Modified = true;
-                return true;
-            }
-
-            return false;
         }
     }
 }
