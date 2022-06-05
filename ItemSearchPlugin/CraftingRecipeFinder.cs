@@ -1,8 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
 using Lumina.Excel.GeneratedSheets;
-using Dalamud.Game.Internal;
-using Dalamud.Plugin;
 using System.Collections.Concurrent;
 using Dalamud.Game;
 using Dalamud.Logging;
@@ -14,15 +12,15 @@ namespace ItemSearchPlugin {
         private readonly GetUIObjectDelegate getUIObject;
 
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        private delegate IntPtr GetUIAgentModuleDelegate(IntPtr UIObject);
+        private delegate IntPtr GetUIAgentModuleDelegate(IntPtr uiObject);
         private GetUIAgentModuleDelegate getUIAgentModule;
 
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        private delegate IntPtr GetAgentObjectDelegate(IntPtr AgentModule, uint agentID);
+        private delegate IntPtr GetAgentObjectDelegate(IntPtr agentModule, uint agentID);
         private readonly GetAgentObjectDelegate getAgentObject;
 
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        private delegate IntPtr SearchItemByCraftingMethodDelegate(IntPtr RecipeAgentObject, ushort itemID);
+        private delegate IntPtr SearchItemByCraftingMethodDelegate(IntPtr recipeAgentObject, ushort itemID);
         private readonly SearchItemByCraftingMethodDelegate searchItemByCraftingMethod;
 
         private readonly ConcurrentQueue<uint> searchQueue = new ConcurrentQueue<uint>();
@@ -64,7 +62,7 @@ namespace ItemSearchPlugin {
 
                 }
 
-                getUIAgentModule = Address.GetVirtualFunction<GetUIAgentModuleDelegate>(uiObjectPtr, 0, 34);
+                getUIAgentModule = Address.GetVirtualFunction<GetUIAgentModuleDelegate>(uiObjectPtr, 0, 35);
                 var uiAgentModulePtr = getUIAgentModule(uiObjectPtr);
                 if (uiAgentModulePtr.Equals(IntPtr.Zero))
                 {

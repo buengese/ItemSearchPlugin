@@ -25,8 +25,8 @@ namespace ItemSearchPlugin {
         private CancellationTokenSource searchCancelTokenSource;
         private ValueTask<List<GenericItem>> searchTask;
 
-        public List<SearchFilter> SearchFilters;
-        public List<IActionButton> ActionButtons;
+        public readonly List<SearchFilter> SearchFilters;
+        private readonly List<IActionButton> actionButtons;
 
         private bool autoTryOn;
         private int debounceKeyPress;
@@ -48,7 +48,7 @@ namespace ItemSearchPlugin {
         private bool extraFiltersExpanded;
         private bool showingFavourites = false;
 
-        private List<GenericItem> favouritesList = new List<GenericItem>();
+        private List<GenericItem> favouritesList = new();
 
         private void PushStyle(ImGuiStyleVar styleVar, Vector2 val) {
             ImGui.PushStyleVar(styleVar, val);
@@ -90,7 +90,7 @@ namespace ItemSearchPlugin {
             FixStainsOrder();
 
             if (Service.Configuration.SelectedStain > 0) {
-                selectedStain = stains.FirstOrDefault(s => s.RowId == Service.Configuration.SelectedStain);
+                selectedStain = stains?.FirstOrDefault(s => s.RowId == Service.Configuration.SelectedStain);
                 if (selectedStain != null) {
                     var b = selectedStain.Color & 255;
                     var g = (selectedStain.Color >> 8) & 255;
@@ -138,13 +138,16 @@ namespace ItemSearchPlugin {
 
             SearchFilters.ForEach(a => a.ConfigSetup());
 
-            ActionButtons = new List<IActionButton> {
+            actionButtons = new List<IActionButton> {
                 new MarketBoardActionButton(),
             //    new DataSiteActionButton(pluginConfig),
-                new RecipeSearchActionButton(plugin.CraftingRecipeFinder),
                 new FfxivStoreActionButton(),
                 new CopyItemAsJson(),
             };
+            if (plugin.CraftingRecipeFinder != null)
+            {
+                actionButtons.Add(new RecipeSearchActionButton(plugin.CraftingRecipeFinder));
+            } 
         }
 
         private void UpdateItemList(int delay = 100) {
@@ -252,7 +255,7 @@ namespace ItemSearchPlugin {
                     var imGuiStyle = ImGui.GetStyle();
                     var windowVisible = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X;
 
-                    IActionButton[] buttons = this.ActionButtons.Where(ab => ab.ButtonPosition == ActionButtonPosition.TOP).ToArray();
+                    IActionButton[] buttons = this.actionButtons.Where(ab => ab.ButtonPosition == ActionButtonPosition.TOP).ToArray();
 
                     for (var i = 0; i < buttons.Length; i++) {
                         var button = buttons[i];
@@ -714,7 +717,7 @@ namespace ItemSearchPlugin {
                                 if ((autoTryOn = autoTryOn && Service.Configuration.ShowTryOn) 
                                     && Service.ClientState.LocalContentId != 0) {
                                     if (selectedItem.ClassJobCategory.Row != 0) {
-                                        plugin.TryOn.TryOnItem((Item)selectedItem, selectedStain?.RowId ?? 0);
+                                        plugin.TryOn?.TryOnItem((Item)selectedItem, selectedStain?.RowId ?? 0);
                                     }
                                 }
                             }
@@ -798,7 +801,7 @@ namespace ItemSearchPlugin {
                     if (selectedItem.GenericItemType == GenericItem.ItemType.Item) {
                         if ((autoTryOn = autoTryOn && Service.Configuration.ShowTryOn) && Service.ClientState.LocalContentId != 0) {
                             if (selectedItem.ClassJobCategory.Row != 0) {
-                                plugin.TryOn.TryOnItem((Item)selectedItem, selectedStain?.RowId ?? 0);
+                                plugin.TryOn?.TryOnItem((Item)selectedItem, selectedStain?.RowId ?? 0);
                             }
                         }
                     }
@@ -828,7 +831,7 @@ namespace ItemSearchPlugin {
                 f?.Dispose();
             }
 
-            foreach (var b in ActionButtons) {
+            foreach (var b in actionButtons) {
                 b?.Dispose();
             }
 
