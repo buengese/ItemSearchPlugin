@@ -11,35 +11,6 @@ namespace ItemSearchPlugin.DataSites {
         public override string NameTranslationKey => "TeamcraftDataSite";
 
         public override string GetItemUrl(Item item) => $"https://ffxivteamcraft.com/db/en/item/{item.RowId}/{item.Name.ToString().Replace(' ', '-')}";
-
-        private static bool teamcraftLocalFailed = false;
-
-        public override void OpenItem(Item item) {
-            if (!(teamcraftLocalFailed || Service.Configuration.TeamcraftForceBrowser)) {
-                Task.Run(() => {
-                    try {
-                        var wr = WebRequest.CreateHttp($"http://localhost:14500/db/en/item/{item.RowId}");
-                        wr.Timeout = 500;
-                        wr.Method = "GET";
-                        wr.GetResponse().Close();
-                    } catch {
-                        try {
-                            if (System.IO.Directory.Exists(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ffxiv-teamcraft"))) {
-                                Process.Start($"teamcraft://db/en/item/{item.RowId}");
-                            } else {
-                                teamcraftLocalFailed = true;
-                                Process.Start($"https://ffxivteamcraft.com/db/en/item/{item.RowId}");
-                            }
-                        } catch {
-                            teamcraftLocalFailed = true;
-                            Process.Start($"https://ffxivteamcraft.com/db/en/item/{item.RowId}");
-                        }
-                    }
-                });
-                return;
-            }
-
-            base.OpenItem(item);
-        }
+        
     }
 }
