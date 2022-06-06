@@ -10,7 +10,6 @@ namespace ItemSearchPlugin.Filters {
     class ItemNameSearchFilter : SearchFilter {
         private string searchText;
         private string lastSearchText;
-        private string[] searchTokens;
 
         public ItemNameSearchFilter(ItemSearchWindow window, string startingValue = "") {
             searchText = startingValue;
@@ -24,19 +23,14 @@ namespace ItemSearchPlugin.Filters {
         public override bool IsSet => !string.IsNullOrEmpty(searchText);
 
         public override bool CanBeDisabled => false;
-
-        private const char BeginTag = '[';
-        private const char EndTag = ']';
-
+        
 
         public override bool HasChanged {
             get {
                 if (searchText != lastSearchText) {
-                    //ParseInputText(); 
                     lastSearchText = searchText;
                     return true;
                 }
-
                 return false;
             }
         }
@@ -80,7 +74,7 @@ namespace ItemSearchPlugin.Filters {
                 ImGui.SetKeyboardFocusHere();
             }
             ImGui.InputText("##ItemNameSearchFilter", ref searchText, 256);
-            /*ImGui.SameLine();
+            ImGui.SameLine();
             ImGui.TextDisabled("(?)");
             if (ImGui.IsItemHovered()) {
                 ImGui.BeginTooltip();
@@ -99,87 +93,11 @@ namespace ItemSearchPlugin.Filters {
 
 
                 ImGui.EndTooltip();
-            }*/
-
+            }
         }
 
         public override string ToString() {
             return searchText;
         }
-
-        /*
-        public void ParseInputText() {
-            window.SearchFilters.ForEach(f => f.ClearTags());
-            
-            searchRegex = null;
-            if (searchText.Length >= 3 && searchText.StartsWith("/") && searchText.EndsWith("/")) {
-                try {
-                    searchRegex = new Regex(searchText.Substring(1, searchText.Length - 2), RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                    return;
-                } catch (Exception) {
-                    searchRegex = null;
-                }
-            }
-
-            searchTokens = searchText.Trim().ToLower().Split(' ').Where(t => !string.IsNullOrEmpty(t)).ToArray();
-
-            parsedSearchText = string.Empty;
-            string currentTag = null;
-            var tags = new List<string>();
-
-            
-            foreach (var c in searchText) {
-                switch (c) {
-                    case BeginTag: {
-                        if (currentTag == null) {
-                            currentTag = "";
-                        } else {
-                            if (currentTag == "") {
-                                parsedSearchText += BeginTag;
-                            } else {
-                                parsedSearchText += $"{BeginTag}{currentTag}{BeginTag}";
-                            }
-                            currentTag = null;
-                        }
-
-                        break;
-                    }
-                    case EndTag: {
-                        if (currentTag == null) {
-                            parsedSearchText += EndTag;
-                        } else {
-                            if (currentTag.Length > 0) {
-                                tags.Add(currentTag.Trim());
-                            } else {
-                                parsedSearchText += $"{BeginTag}{EndTag}";
-                            }
-                            currentTag = null;
-                        }
-                        break;
-                    }
-                    default: {
-                        if (currentTag == null) {
-                            parsedSearchText += c;
-                        } else {
-                            currentTag += c;
-                        }
-                        break;
-                    }
-                }
-            }
-
-            
-            if (currentTag != null) {
-                parsedSearchText += $"{BeginTag}{currentTag}";
-            }
-
-            foreach (var t in tags) {
-                window.SearchFilters.ForEach(f => f.ParseTag(t));
-            }
-
-            parsedSearchText = searchText;
-        }*/
-
-
     }
 }
