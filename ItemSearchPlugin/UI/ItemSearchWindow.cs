@@ -22,7 +22,8 @@ namespace ItemSearchPlugin {
         
         private PluginUI PluginUI { get; }
         private List<GenericItem> LuminaItems { get; }
-        
+        private List<GenericItem> FilteredItems { get; set; }
+
         private GenericItem selectedItem;
         private int selectedItemIndex = -1;
 
@@ -284,27 +285,25 @@ namespace ItemSearchPlugin {
                     }
                 } else */ 
                 if (this.LuminaItems != null) {
-
-
                     // Actual search here!
-
 
                     if (SearchFilters.Any(x => x.IsEnabled && x.ShowFilter && x.IsSet)) {
                         showingFavourites = false;
                         isSearch = true;
-                        /*
+                        
                         if (SearchFilters.Any(x => x.IsEnabled && x.HasChanged) || forceReload)
                         {
                             forceReload = false;
 
-                            items = SearchFilters.Where(filter => filter.IsEnabled && filter.IsSet).Aggregate(plugin.LuminaItems, (current, filter) => current.Where(filter.CheckFilter).ToList());
+                            FilteredItems = SearchFilters.Where(filter => filter.IsEnabled && filter.ShowFilter && filter.IsSet)
+                                .Aggregate(this.LuminaItems, (current, filter) => current.Where(filter.CheckFilter).ToList());
                             this.selectedItemIndex = -1;
                             selectedItem = null;
                         }
 
-                        DrawItemList(items, childSize, ref isOpen);*/
+                        DrawItemList(FilteredItems, childSize, ref this._visible);
 
-                        if (SearchFilters.Any(x => x.IsEnabled && x.ShowFilter && x.HasChanged) || forceReload) {
+                        /*if (SearchFilters.Any(x => x.IsEnabled && x.ShowFilter && x.HasChanged) || forceReload) {
                             forceReload = false;
                             this.searchCancelTokenSource?.Cancel();
                             this.searchCancelTokenSource = new CancellationTokenSource();
@@ -318,7 +317,7 @@ namespace ItemSearchPlugin {
 
                         if (this.searchTask.IsCompletedSuccessfully) {
                             DrawItemList(this.searchTask.Result, childSize, ref this._visible);
-                        }
+                        }*/
 
 
                     } else {
