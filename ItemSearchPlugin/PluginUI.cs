@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Dalamud.Interface;
 using Dalamud.Utility;
 using ImGuiNET;
 using ImGuiScene;
@@ -10,26 +13,33 @@ namespace ItemSearchPlugin;
 
 public class PluginUI : IDisposable
 {
+    public ImFontPtr fontPtr;
     internal ItemSearchPlugin Plugin { get; }
     
     private readonly Dictionary<ushort, TextureWrap> textureDictionary = new();
 
-    private ItemSearchConfigWindow ConfigWindow { get; }
-    internal ItemSearchWindow MainWindow { get; }
+    private readonly ItemSearchConfigWindow configWindow;
+    internal readonly ItemSearchWindow MainWindow;
 
     internal PluginUI(ItemSearchPlugin plugin)
     {
         this.Plugin = plugin;
 
         this.MainWindow = new ItemSearchWindow(this);
-        this.ConfigWindow = new ItemSearchConfigWindow(this);
+        this.configWindow = new ItemSearchConfigWindow(this);
+
+        Service.PluginInterface.UiBuilder.BuildFonts += this.HandleBuildFonts;
+        
+        Service.PluginInterface.UiBuilder.RebuildFonts();
 
         Service.PluginInterface.UiBuilder.Draw += this.Draw;
         Service.PluginInterface.UiBuilder.OpenConfigUi += this.OpenConfigUI;
+
     }
 
     public void Dispose()
     {
+        Service.PluginInterface.UiBuilder.BuildFonts -= this.HandleBuildFonts;
         Service.PluginInterface.UiBuilder.OpenConfigUi -= this.OpenConfigUI;
         Service.PluginInterface.UiBuilder.Draw -= this.Draw;
         
@@ -45,22 +55,51 @@ public class PluginUI : IDisposable
     {
         this.MainWindow.Toggle();
     }
-    
-    internal void OpenConfigUI()
+
+    private void OpenConfigUI()
     {
-        this.ConfigWindow.Open();
+        this.configWindow.Open();
     }
 
     internal void ToggleConfigUI()
     {
-        this.ConfigWindow.Toggle();
+        this.configWindow.Toggle();
     }
 
     private void Draw()
     {
         this.MainWindow.Draw();
-        this.ConfigWindow.Draw();
+        this.configWindow.Draw();
     }
+    
+    private unsafe void HandleBuildFonts()
+    {
+        var fontPath = Path.Combine(Service.PluginInterface.DalamudAssetDirectory.FullName, "UIRes", "NotoSansCJKjp-Medium.otf");
+        this.fontPtr = ImGui.GetIO().Fonts.AddFontFromFileTTF(fontPath, 24.0f);
+
+        ImFontConfigPtr fontConfig = ImGuiNative.ImFontConfig_ImFontConfig();
+        fontConfig.MergeMode = true;
+        fontConfig.NativePtr->DstFont = UiBuilder.DefaultFont.NativePtr;
+
+        var fontRangeHandle = GCHandle.Alloc(
+            new ushort[]
+            {
+                0x202F,
+                0x202F,
+                0,
+            },
+            GCHandleType.Pinned);
+
+        if (Service.PluginInterface.AssemblyLocation.DirectoryName != null)
+        {
+            var otherPath = Path.Combine(Service.PluginInterface.AssemblyLocation.DirectoryName, "Resources", "NotoSans-Medium.otf");
+            ImGui.GetIO().Fonts.AddFontFromFileTTF(otherPath, 17.0f, fontConfig, fontRangeHandle.AddrOfPinnedObject());
+        }
+
+        fontConfig.Destroy();
+        fontRangeHandle.Free();
+    }
+
     
     internal void DrawIcon(ushort icon, Vector2 size) {
         if (icon < 65000) {

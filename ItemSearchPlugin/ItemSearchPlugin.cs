@@ -1,20 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using Dalamud;
-using Dalamud.Game.Text;
-using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Logging;
 using Dalamud.Plugin;
-using Dalamud.Utility;
-using ImGuiNET;
-using ImGuiScene;
 using ItemSearchPlugin.DataSites;
-using Lumina.Excel.GeneratedSheets;
 
 namespace ItemSearchPlugin {
     public class ItemSearchPlugin : IDalamudPlugin {

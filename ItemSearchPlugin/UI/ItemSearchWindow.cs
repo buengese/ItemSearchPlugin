@@ -37,10 +37,6 @@ namespace ItemSearchPlugin {
         private int debounceKeyPress;
         private bool doSearchScroll;
         private bool forceReload;
-
-        private bool errorLoadingItems;
-
-        private bool triedLoadingItems = false;
         
         private bool extraFiltersExpanded;
         
@@ -102,6 +98,7 @@ namespace ItemSearchPlugin {
         public ItemSearchWindow(PluginUI pluginUI, string searchText = "")
         {
             this.PluginUI = pluginUI;
+            
             extraFiltersExpanded = Service.Configuration.ExpandedFilters;
             autoTryOn = Service.Configuration.ShowTryOn && Service.Configuration.TryOnEnabled;
 
@@ -133,7 +130,7 @@ namespace ItemSearchPlugin {
             // load filters
             SearchFilters = new List<SearchFilter> {
                 new ItemNameSearchFilter(this, searchText),
-                new ItemUICategorySearchFilter(),
+                new ItemUICategorySearchFilter(this.PluginUI),
                 new LevelEquipSearchFilter(),
                 new LevelItemSearchFilter(),
                 new RaritySearchFilter(),
@@ -639,8 +636,7 @@ namespace ItemSearchPlugin {
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
                 if (filter.IsSet)
                 {
-                    ImGui.TextColored(filter.IsFromTag ? filterUsingTagColour : filterInUseColour,
-                        $"{filter._LocalizedName}: ");
+                    ImGui.TextColored(filterInUseColour, $"{filter._LocalizedName}: ");
                 }
                 else
                 {
@@ -650,9 +646,7 @@ namespace ItemSearchPlugin {
                 ImGui.NextColumn();
                 // Draw actual filter editor
                 ImGui.BeginGroup();
-                if (filter.IsFromTag && filter.GreyWithTags) ImGui.PushStyleColor(ImGuiCol.Text, 0xFF888888);
                 filter.DrawEditor();
-                if (filter.IsFromTag && filter.GreyWithTags) ImGui.PopStyleColor();
                 ImGui.EndGroup();
                 while (ImGui.GetColumnIndex() != 0)
                     ImGui.NextColumn();
@@ -680,7 +674,6 @@ namespace ItemSearchPlugin {
         }
 
         private void DrawItemList(List<GenericItem> itemList, Vector2 listSize, ref bool isOpen) {
-            var fontPushed = false;
             var stylesPushed = 0;
             var colorsPushed = 0;
             try {
@@ -699,6 +692,8 @@ namespace ItemSearchPlugin {
                 var rowSize = Vector2.Zero;
 
                 for (var i = 0; i < itemList.Count; i++) {
+                    // TODO: remove this from the loop we can calculate ItemSize.Y once and setup all this become goind through the loop
+                    
                     if (i == 0 && itemSize == Vector2.Zero) {
                         itemSize = ImGui.CalcTextSize(itemList[i].Name);
                         rowSize = new Vector2(ImGui.GetWindowContentRegionWidth() - 20 * ImGui.GetIO().FontGlobalScale, itemSize.Y);
@@ -711,12 +706,13 @@ namespace ItemSearchPlugin {
                         }
                     }
 
+                    // ???
                     if (!(doSearchScroll && selectedItemIndex == i) && (cursorPosY < scrollY - itemSize.Y || cursorPosY > scrollY + listSize.Y)) {
+                        PluginLog.Information("that condition");
                         ImGui.SetCursorPosY(cursorPosY + itemSize.Y + style.ItemSpacing.Y);
                     } else {
-
+                        // begin draw favorites icon
                         ImGui.PushFont(UiBuilder.IconFont);
-                        fontPushed = true;
 
                         var starText = $"{(char)FontAwesomeIcon.Heart}";
                         var starTextSize = ImGui.CalcTextSize(starText);
@@ -732,6 +728,7 @@ namespace ItemSearchPlugin {
                         ImGui.PushStyleColor(ImGuiCol.Text, starTextCol); colorsPushed++;
 
                         ImGui.Text(starText);
+                        // favorites click handling
                         if (ImGui.IsItemClicked()) {
                             if (Service.Configuration.Favorites.Contains(itemList[i].RowId)) {
                                 Service.Configuration.Favorites.Remove(itemList[i].RowId);
@@ -742,9 +739,10 @@ namespace ItemSearchPlugin {
                         }
 
                         ImGui.PopStyleColor(); colorsPushed--;
-
                         ImGui.PopFont();
-                        fontPushed = false;
+                        // end draw favorites item
+
+                        // begin draw item name container
                         ImGui.SameLine();
 
                         var hovered = ImGui.IsMouseHoveringRect(ImGui.GetCursorScreenPos(), ImGui.GetCursorScreenPos() + rowSize);
@@ -754,17 +752,21 @@ namespace ItemSearchPlugin {
                         ImGui.BeginGroup();
                         ImGui.BeginChild($"###ItemContainer{j++}", rowSize, false);
                         
-                        
+                        // set name font
+                        ImGui.PushFont(PluginUI.fontPtr);
+                        // dram Item name
                         ImGui.Text($" {itemList[i].Name}");
                         if (itemList[i].GenericItemType == GenericItem.ItemType.EventItem) {
                             ImGui.SameLine();
                             ImGui.TextDisabled(" [Key Item]");
                         }
+                        // clear name font
+                        ImGui.PopFont();
+                        
                         var textClick = ImGui.IsItemClicked();
                         ImGui.EndChild();
                         var childClicked = ImGui.IsItemClicked();
                         ImGui.EndGroup();
-                        var groupHovered = ImGui.IsItemHovered();
                         var groupClicked = ImGui.IsItemClicked();
                         ImGui.PopStyleColor(); colorsPushed--;
 
@@ -886,7 +888,6 @@ namespace ItemSearchPlugin {
                 
             }
 
-            if (fontPushed) ImGui.PopFont();
             if (colorsPushed > 0) ImGui.PopStyleColor(colorsPushed);
             if (stylesPushed > 0) ImGui.PopStyleColor(stylesPushed);
         }

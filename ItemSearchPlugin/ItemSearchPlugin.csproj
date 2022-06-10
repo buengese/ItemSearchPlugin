@@ -34,9 +34,6 @@
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 	</PropertyGroup>
 	<ItemGroup>
-		<Compile Remove="Resources\**" />
-		<EmbeddedResource Remove="Resources\**" />
-		<None Remove="Resources\**" />
 		<Compile Remove="Publish\**" />
 		<EmbeddedResource Remove="Publish\**" />
 		<Compile Remove="lib\**" />
@@ -102,5 +99,8 @@
 		<EmbeddedResource Include="Localization\de.json" />
 		<EmbeddedResource Include="Localization\fr.json" />
 		<EmbeddedResource Include="Localization\jp.json" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Content Include="Resources\NotoSans-Medium.otf" />
 	</ItemGroup>
 </Project>
