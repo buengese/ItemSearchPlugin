@@ -22,7 +22,7 @@ namespace ItemSearchPlugin {
         
         private PluginUI PluginUI { get; }
         private List<GenericItem> LuminaItems { get; }
-        private List<GenericItem> FilteredItems { get; set; }
+        private List<GenericItem> FilteredItems { get; set; } = new();
 
         private GenericItem selectedItem;
         private int selectedItemIndex = -1;
@@ -238,8 +238,7 @@ namespace ItemSearchPlugin {
             
             try {
                 var isSearch = false;
-                // if (triedLoadingItems == false || Service.Configuration.SelectedClientLanguage != plugin.LuminaItemsClientLanguage) UpdateItemList(1000);
-
+                
                 if ((selectedItemIndex < 0 && selectedItem != null) || (selectedItemIndex >= 0 && selectedItem == null)) {
                     // Should never happen, but just incase
                     selectedItemIndex = -1;
@@ -277,13 +276,7 @@ namespace ItemSearchPlugin {
                 ImGui.BeginChild("scrolling", childSize, true, ImGuiWindowFlags.HorizontalScrollbar);
 
                 PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(0, 0));
-
-                /* if (errorLoadingItems) {
-                    ImGui.TextColored(new Vector4(1f, 0.1f, 0.1f, 1.00f), Loc.Localize("ItemSearchListLoadFailed", "Error loading item list."));
-                    if (ImGui.SmallButton("Retry")) {
-                        UpdateItemList();
-                    }
-                } else */ 
+                
                 if (this.LuminaItems != null) {
                     // Actual search here!
 
@@ -420,7 +413,7 @@ namespace ItemSearchPlugin {
                 var configText = $"{(char)FontAwesomeIcon.Cog}";
                 var configTextSize = ImGui.CalcTextSize(configText);
                 ImGui.PopFont();
-                var itemCountText = isSearch ? string.Format(Loc.Localize("ItemCount", "{0} Items"), this.searchTask.Result.Count) : $"v{PluginUI.Plugin.Version}";
+                var itemCountText = isSearch ? string.Format(Loc.Localize("ItemCount", "{0} Items"), this.FilteredItems.Count) : $"v{PluginUI.Plugin.Version}";
                 ImGui.SameLine(ImGui.GetWindowWidth() - (configTextSize.X + ImGui.GetStyle().ItemSpacing.X) - (ImGui.CalcTextSize(itemCountText).X + ImGui.GetStyle().ItemSpacing.X * (isSearch ? 3 : 2)));
                 if (isSearch)
                 {
