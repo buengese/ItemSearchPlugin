@@ -75,7 +75,7 @@ public class PluginUI : IDisposable
     private unsafe void HandleBuildFonts()
     {
         var fontPath = Path.Combine(Service.PluginInterface.DalamudAssetDirectory.FullName, "UIRes", "NotoSansCJKjp-Medium.otf");
-        this.fontPtr = ImGui.GetIO().Fonts.AddFontFromFileTTF(fontPath, 24.0f);
+        this.fontPtr = ImGui.GetIO().Fonts.AddFontFromFileTTF(fontPath, 17.0f);
 
         ImFontConfigPtr fontConfig = ImGuiNative.ImFontConfig_ImFontConfig();
         fontConfig.MergeMode = true;

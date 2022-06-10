@@ -12,7 +12,7 @@ namespace ItemSearchPlugin {
 
         private PluginUI PluginUI { get; }
 
-        internal CraftingRecipeFinder CraftingRecipeFinder { get; } = null;
+        private CraftingRecipeFinder CraftingRecipeFinder { get; } = null;
         
         public static DataSite[] DataSites { get; private set; } = { new GarlandToolsDataSite() }; 
         public string Version { get; }
