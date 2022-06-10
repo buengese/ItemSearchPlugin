@@ -187,9 +187,7 @@ namespace ItemSearchPlugin.Filters {
                 }
             }
         }
-
-        public override bool GreyWithTags => false;
-
+        
         public override string ToString() {
             return $"{(selectedMode == 0 ? "Any of" : "All of")} [{string.Join(", ", classJobs.Where(cj => selectedClassJobs.Contains(cj.RowId)).Select(cj => cj.Abbreviation))}]";
         }

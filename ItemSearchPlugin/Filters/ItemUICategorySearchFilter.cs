@@ -25,6 +25,8 @@ namespace ItemSearchPlugin.Filters {
             }
         }
 
+        private readonly PluginUI pluginUI;
+
         private readonly List<ItemUICategory> uiCategories;
         private readonly string[] uiCategoriesArray;
 
@@ -34,9 +36,14 @@ namespace ItemSearchPlugin.Filters {
         private bool focused;
         private readonly Vector2 popupSize = new Vector2(-1, 120);
 
-        public ItemUICategorySearchFilter() {
+        public ItemUICategorySearchFilter(PluginUI pluginUI)
+        {
+            this.pluginUI = pluginUI;
+            
             uiCategories = new List<ItemUICategory> {null};
-            uiCategories.AddRange(Service.Data.GetExcelSheet<ItemUICategory>().ToList().Where(x => !string.IsNullOrEmpty(x.Name)).OrderBy(x => x.Name.ToString()));
+            uiCategories.AddRange(Service.Data.GetExcelSheet<ItemUICategory>().ToList()
+                .Where(x => !string.IsNullOrEmpty(x.Name)).OrderBy(x => x.Name.ToString()));
+            
             string nullName = Loc.Localize("ItemUiCategorySearchFilterAll", "All");
             uiCategoriesArray = uiCategories.Select(x => x == null ? nullName : x.Name.ToString().Replace("\u0002\u001F\u0001\u0003", "-")).ToArray();
         }
@@ -49,6 +56,7 @@ namespace ItemSearchPlugin.Filters {
         public override void DrawEditor() {
             ImGui.PushItemWidth(-1);
 
+            ImGui.PushFont(pluginUI.fontPtr);
             if (ImGui.BeginCombo("##ItemUiCategorySearchFilterBox", uiCategoriesArray[selectedCategory])) {
                 ImGui.SetNextItemWidth(-1);
                 ImGui.InputTextWithHint("###ItemUiCategorySearchFilterFilter", "Filter", ref categorySearchInput,  60);
@@ -89,6 +97,7 @@ namespace ItemSearchPlugin.Filters {
                 focused = false;
                 categorySearchInput = string.Empty;
             }
+            ImGui.PopFont();
             
             ImGui.PopItemWidth();
         }

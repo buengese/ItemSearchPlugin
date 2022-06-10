@@ -89,10 +89,6 @@ namespace ItemSearchPlugin {
             }
         }
 
-        public virtual bool IsFromTag => false;
-        public virtual bool GreyWithTags => true;
-
-        
         /// <summary>
         /// Called when the filter is hidden using the config menu.
         /// </summary>
