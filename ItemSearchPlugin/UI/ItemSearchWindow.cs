@@ -26,12 +26,12 @@ namespace ItemSearchPlugin {
 
         private GenericItem selectedItem;
         private int selectedItemIndex = -1;
-
-        private CancellationTokenSource searchCancelTokenSource;
-        private ValueTask<List<GenericItem>> searchTask;
+        
+        private List<GenericItem> favouritesList = new();
 
         public readonly List<SearchFilter> SearchFilters;
         private readonly List<IActionButton> actionButtons;
+        private readonly List<Stain> stains;
 
         private bool _visible;
         private bool autoTryOn;
@@ -46,7 +46,6 @@ namespace ItemSearchPlugin {
         private int styleCounter;
 
         private Stain selectedStain;
-        private readonly List<Stain> stains;
         private bool showStainSelector;
         private Vector4 selectedStainColor = Vector4.Zero;
         
@@ -61,9 +60,7 @@ namespace ItemSearchPlugin {
             {9, new Vector4(0.7f, 0.45f, 0.9f, 1)},
             {10, new Vector4(1f, 1f, 1f, 1f)}
         };
-
-        private List<GenericItem> favouritesList = new();
-
+        
         #region Utility
         
         private void PushStyle(ImGuiStyleVar styleVar, Vector2 val) {
@@ -224,12 +221,6 @@ namespace ItemSearchPlugin {
             });
         }*/
 
-        public Vector4 HSVtoRGB(Vector4 hsv) {
-            
-            ImGui.ColorConvertHSVtoRGB(hsv.X, hsv.Y, hsv.Z, out var r, out var g, out var b);
-            return new Vector4(r, g, b, hsv.W);
-        }
-
         public void Draw() {
             if (!this._visible)
             {
@@ -245,10 +236,10 @@ namespace ItemSearchPlugin {
                     selectedItem = null;
                 }
 
+                // setup next Window
                 ImGui.SetNextWindowSize(new Vector2(500, 500), ImGuiCond.FirstUseEver);
-                
                 PushStyle(ImGuiStyleVar.WindowMinSize, new Vector2(350, 400));
-
+                
                 if (!ImGui.Begin(Loc.Localize("ItemSearchPlguinMainWindowHeader", $"Item Search") + "###itemSearchPluginMainWindow", ref this._visible, ImGuiWindowFlags.NoCollapse)) {
                     ResetStyle();
                     ImGui.End();
@@ -271,6 +262,7 @@ namespace ItemSearchPlugin {
                 // Draw all enabled filters
                 this.DrawFilters();
 
+                // Begin search area
                 var windowSize = ImGui.GetWindowSize();
                 var childSize = new Vector2(0, Math.Max(100 * ImGui.GetIO().FontGlobalScale, windowSize.Y - ImGui.GetCursorPosY() - 45 * ImGui.GetIO().FontGlobalScale));
                 ImGui.BeginChild("scrolling", childSize, true, ImGuiWindowFlags.HorizontalScrollbar);
@@ -278,8 +270,6 @@ namespace ItemSearchPlugin {
                 PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(0, 0));
                 
                 if (this.LuminaItems != null) {
-                    // Actual search here!
-
                     if (SearchFilters.Any(x => x.IsEnabled && x.ShowFilter && x.IsSet)) {
                         showingFavourites = false;
                         isSearch = true;
@@ -295,27 +285,7 @@ namespace ItemSearchPlugin {
                         }
 
                         DrawItemList(FilteredItems, childSize, ref this._visible);
-
-                        /*if (SearchFilters.Any(x => x.IsEnabled && x.ShowFilter && x.HasChanged) || forceReload) {
-                            forceReload = false;
-                            this.searchCancelTokenSource?.Cancel();
-                            this.searchCancelTokenSource = new CancellationTokenSource();
-                            var asyncEnum = this.LuminaItems.ToAsyncEnumerable();
-
-                            asyncEnum = SearchFilters.Where(filter => filter.IsEnabled && filter.ShowFilter && filter.IsSet).Aggregate(asyncEnum, (current, filter) => current.Where(filter.CheckFilter));
-                            this.selectedItemIndex = -1;
-                            selectedItem = null;
-                            this.searchTask = asyncEnum.ToListAsync(this.searchCancelTokenSource.Token);
-                        }
-
-                        if (this.searchTask.IsCompletedSuccessfully) {
-                            DrawItemList(this.searchTask.Result, childSize, ref this._visible);
-                        }*/
-
-
                     } else {
-
-
                         if (Service.Configuration.Favorites.Count > 0) {
                             if (!showingFavourites || favouritesList.Count != Service.Configuration.Favorites.Count) {
                                 showingFavourites = true;
@@ -338,25 +308,20 @@ namespace ItemSearchPlugin {
                 //
 
                 PopStyle();
-
                 ImGui.EndChild();
 
                 // Darken choose button if it shouldn't be clickable
                 PushStyle(ImGuiStyleVar.Alpha, this.selectedItemIndex < 0 || selectedItem == null || selectedItem.Icon >= 65000 ? 0.25f : 1);
 
                 if (ImGui.Button(Loc.Localize("Choose", "Choose"))) {
-                    try {
-                        if (selectedItem != null && selectedItem.Icon < 65000) {
+                    if (selectedItem != null && selectedItem.Icon < 65000) {
                             ChatHelper.LinkItem(selectedItem);
                             if (Service.Configuration.CloseOnChoose) {
                                 this._visible = false;
                             }
-                        }
-                    } catch (Exception ex) {
-                        Log.Error($"Exception in Choose: {ex.Message}");
                     }
                 }
-
+                // Clear Button style
                 PopStyle();
 
                 if (!Service.Configuration.CloseOnChoose) {
@@ -372,6 +337,7 @@ namespace ItemSearchPlugin {
                     ImGui.Text(Loc.Localize("DalamudItemNotLinkable", "This item is not linkable."));
                 }
 
+                // Try on Button area
                 if (Service.Configuration.ShowTryOn && Service.ClientState?.LocalContentId != 0) {
                     ImGui.SameLine();
                     if (ImGui.Checkbox(Loc.Localize("ItemSearchTryOnButton", "Try On"), ref autoTryOn)) {
@@ -409,12 +375,18 @@ namespace ItemSearchPlugin {
                         ImGui.EndTooltip();
                     }
                 }
+                // end try on Button area
+                
                 ImGui.PushFont(UiBuilder.IconFont);
                 var configText = $"{(char)FontAwesomeIcon.Cog}";
                 var configTextSize = ImGui.CalcTextSize(configText);
                 ImGui.PopFont();
                 var itemCountText = isSearch ? string.Format(Loc.Localize("ItemCount", "{0} Items"), this.FilteredItems.Count) : $"v{PluginUI.Plugin.Version}";
-                ImGui.SameLine(ImGui.GetWindowWidth() - (configTextSize.X + ImGui.GetStyle().ItemSpacing.X) - (ImGui.CalcTextSize(itemCountText).X + ImGui.GetStyle().ItemSpacing.X * (isSearch ? 3 : 2)));
+                
+                ImGui.SameLine(ImGui.GetWindowWidth()
+                               - (configTextSize.X + ImGui.GetStyle().ItemSpacing.X) 
+                               - (ImGui.CalcTextSize(itemCountText).X + ImGui.GetStyle().ItemSpacing.X * (isSearch ? 3 : 2)));
+                
                 if (isSearch)
                 {
                     if (ImGui.Button(itemCountText)) {
@@ -430,7 +402,7 @@ namespace ItemSearchPlugin {
                             sb.AppendLine();
                         }
 
-                        foreach (var i in this.searchTask.Result) {
+                        foreach (var i in this.FilteredItems) {
                             sb.AppendLine(i.Name);
                         }
                         ImGui.SetClipboardText(sb.ToString());
@@ -449,74 +421,10 @@ namespace ItemSearchPlugin {
                     PluginUI.ToggleConfigUI();
                 }
                 ImGui.PopFont();
-
-                var mainWindowPos = ImGui.GetWindowPos();
-                var mainWindowSize = ImGui.GetWindowSize();
-
                 ImGui.End();
-
-
+                
                 if (showStainSelector) {
-                    ImGui.SetNextWindowSize(new Vector2(210, 180));
-                    ImGui.SetNextWindowPos(mainWindowPos + mainWindowSize - new Vector2(0, 180));
-                    ImGui.Begin("Select Dye", ref showStainSelector, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove);
-                    
-                    ImGui.BeginTabBar("stainShadeTabs");
-
-                    var unselectedModifier = new Vector4(0, 0, 0, 0.7f);
-
-                    foreach (var shade in StainShadeHeaders) {
-                        ImGui.PushStyleColor(ImGuiCol.TabActive, shade.Value);
-                        ImGui.PushStyleColor(ImGuiCol.TabHovered, shade.Value);
-                        ImGui.PushStyleColor(ImGuiCol.TabUnfocused, shade.Value);
-                        ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, shade.Value);
-                        ImGui.PushStyleColor(ImGuiCol.Tab, shade.Value - unselectedModifier);
-                        
-                        if (ImGui.BeginTabItem($"    ###StainShade{shade.Key}")) {
-                            var c = 0;
-
-                            PushStyle(ImGuiStyleVar.FrameBorderSize, 2f);
-                            foreach (var stain in stains.Where(s => s.Shade == shade.Key && !string.IsNullOrEmpty(s.Name))) {
-                                var b = stain.Color & 255;
-                                var g = (stain.Color >> 8) & 255;
-                                var r = (stain.Color >> 16) & 255;
-
-                                var stainColor = new Vector4(r / 255f, g / 255f, b / 255f, 1f);
-
-                                ImGui.PushStyleColor(ImGuiCol.Border, stain.Unknown4 ? new Vector4(1, 1, 0, 1) : new Vector4(1, 1, 1, 1));
-
-                                if (ImGui.ColorButton($"###stain{stain.RowId}", stainColor, ImGuiColorEditFlags.NoTooltip)) {
-                                    selectedStain = stain;
-                                    selectedStainColor = stainColor;
-                                    showStainSelector = false;
-                                    Service.Configuration.SelectedStain = stain.RowId;
-                                    Service.Configuration.Save();
-                                }
-
-                                ImGui.PopStyleColor(1);
-
-                                if (ImGui.IsItemHovered()) {
-                                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                                    ImGui.SetTooltip(stain.Name);
-                                }
-  
-                                if (c++ < 5) {
-                                    ImGui.SameLine();
-                                } else {
-                                    c = 0;
-                                }
-                            }
-
-                            PopStyle(1);
-                            
-                            ImGui.EndTabItem();
-                        }
-
-                        ImGui.PopStyleColor(5);
-                    }
-
-                    ImGui.EndTabBar();
-                    ImGui.End();
+                    DrawStainsSelector(ImGui.GetWindowPos(), ImGui.GetWindowSize());
                 }
 
 
@@ -607,6 +515,8 @@ namespace ItemSearchPlugin {
 
         private void DrawFilters()
         {
+            var filterInUseColour = new Vector4(0, 1, 0, 1); // TODO: move out of this functions
+
             // Calculate size of first column
             var filterNameMax = SearchFilters.Where(x => x.IsEnabled && x.ShowFilter).Select(x =>
             {
@@ -615,14 +525,13 @@ namespace ItemSearchPlugin {
                 return x._LocalizedNameWidth;
             }).Max();
             
+            // Use a table layout with 2 columns
             ImGui.Columns(2);
             ImGui.SetColumnWidth(0, filterNameMax + ImGui.GetStyle().ItemSpacing.X * 2);
-            var filterInUseColour = new Vector4(0, 1, 0, 1);
-            var filterUsingTagColour = new Vector4(0.4f, 0.7f, 1, 1);
-            // Draw individual filters
+            // For each visable filter
             foreach (var filter in SearchFilters.Where(x => x.IsEnabled && x.ShowFilter))
             {
-                // Draw filter title
+                // Draw first column = filter name
                 if (!extraFiltersExpanded && filter.CanBeDisabled && !filter.IsSet && !filter._ForceVisible) continue;
                 ImGui.SetCursorPosX((filterNameMax + ImGui.GetStyle().ItemSpacing.X) - filter._LocalizedNameWidth);
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
@@ -635,15 +544,15 @@ namespace ItemSearchPlugin {
                     ImGui.Text($"{filter._LocalizedName}: ");
                 }
 
+                // Draw second column with the filter editor
                 ImGui.NextColumn();
-                // Draw actual filter editor
                 ImGui.BeginGroup();
                 filter.DrawEditor();
                 ImGui.EndGroup();
-                while (ImGui.GetColumnIndex() != 0)
+                while (ImGui.GetColumnIndex() != 0) // TODO: do we need this?
                     ImGui.NextColumn();
             }
-            // End drawing actual filters
+            // Return to single column layout
             ImGui.Columns(1);
 
             // Draw extra filters expand button
@@ -659,8 +568,6 @@ namespace ItemSearchPlugin {
                 Service.Configuration.ExpandedFilters = extraFiltersExpanded;
                 Service.Configuration.Save();
             }
-            
-            // Reset style
             ImGui.PopStyleVar(2);
             ImGui.PopFont();
         }
@@ -675,34 +582,30 @@ namespace ItemSearchPlugin {
                     ImGui.SetScrollY(0);
                 }
 
-                var itemSize = Vector2.Zero;
+                var itemSize = ImGui.CalcTextSize("#plaholder");;
+                var rowSize = new Vector2(ImGui.GetWindowContentRegionWidth() - 20 * ImGui.GetIO().FontGlobalScale, itemSize.Y);;
+
                 float cursorPosY = 0;
                 var scrollY = ImGui.GetScrollY();
                 var style = ImGui.GetStyle();
                 var j = 0;
 
-                var rowSize = Vector2.Zero;
-
                 for (var i = 0; i < itemList.Count; i++) {
-                    // TODO: remove this from the loop we can calculate ItemSize.Y once and setup all this become goind through the loop
-                    
-                    if (i == 0 && itemSize == Vector2.Zero) {
-                        itemSize = ImGui.CalcTextSize(itemList[i].Name);
-                        rowSize = new Vector2(ImGui.GetWindowContentRegionWidth() - 20 * ImGui.GetIO().FontGlobalScale, itemSize.Y);
-                        if (!doSearchScroll) {
-                            var sizePerItem = itemSize.Y + style.ItemSpacing.Y;
-                            var skipItems = (int)Math.Floor(scrollY / sizePerItem);
-                            cursorPosY = skipItems * sizePerItem;
-                            ImGui.SetCursorPosY(5 + cursorPosY + style.ItemSpacing.X);
-                            i = skipItems;
-                        }
+                    if (i == 0 && !doSearchScroll)
+                    {
+                        var sizePerItem = itemSize.Y + style.ItemSpacing.Y;
+                        var skipItems = (int) Math.Floor(scrollY / sizePerItem);
+                        cursorPosY = skipItems * sizePerItem;
+                        ImGui.SetCursorPosY(5 + cursorPosY + style.ItemSpacing.X);
+                        i = skipItems;
                     }
 
                     // ???
-                    if (!(doSearchScroll && selectedItemIndex == i) && (cursorPosY < scrollY - itemSize.Y || cursorPosY > scrollY + listSize.Y)) {
+                    /*if (!(doSearchScroll && selectedItemIndex == i) && (cursorPosY < scrollY - itemSize.Y || cursorPosY > scrollY + listSize.Y)) {
                         PluginLog.Information("that condition");
                         ImGui.SetCursorPosY(cursorPosY + itemSize.Y + style.ItemSpacing.Y);
-                    } else {
+                    } else {*/
+                    
                         // begin draw favorites icon
                         ImGui.PushFont(UiBuilder.IconFont);
 
@@ -743,7 +646,6 @@ namespace ItemSearchPlugin {
                         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero); stylesPushed++;
                         ImGui.BeginGroup();
                         ImGui.BeginChild($"###ItemContainer{j++}", rowSize, false);
-                        
                         // set name font
                         ImGui.PushFont(PluginUI.fontPtr);
                         // dram Item name
@@ -755,14 +657,13 @@ namespace ItemSearchPlugin {
                         // clear name font
                         ImGui.PopFont();
                         
+                        // handle item selection
                         var textClick = ImGui.IsItemClicked();
                         ImGui.EndChild();
                         var childClicked = ImGui.IsItemClicked();
                         ImGui.EndGroup();
                         var groupClicked = ImGui.IsItemClicked();
                         ImGui.PopStyleColor(); colorsPushed--;
-
-
                         if (textClick || childClicked || groupClicked) {
                             this.selectedItem = itemList[i];
                             this.selectedItemIndex = i;
@@ -788,21 +689,18 @@ namespace ItemSearchPlugin {
                                     }
                                 }
                             }
-                            
                         }
+                        // end item name handling
 
                         ImGui.PopStyleVar(); stylesPushed--;
-                    }
-
-
-
+                    //}
+                    
                     if (doSearchScroll && selectedItemIndex == i) {
                         doSearchScroll = false;
                         ImGui.SetScrollHereY(0.5f);
                     }
 
                     cursorPosY = ImGui.GetCursorPosY();
-
                     if (cursorPosY > scrollY + listSize.Y && !doSearchScroll) {
                         var c = itemList.Count - i;
                         ImGui.BeginChild("###scrollFillerBottom", new Vector2(0, c * (itemSize.Y + style.ItemSpacing.Y)), false);
@@ -811,6 +709,7 @@ namespace ItemSearchPlugin {
                     }
                 }
 
+                #region Hotkeys
                 var keyStateDown = ImGui.GetIO().KeysDown[0x28] || Service.KeyState[0x28];
                 var keyStateUp = ImGui.GetIO().KeysDown[0x26] || Service.KeyState[0x26];
 
@@ -872,8 +771,8 @@ namespace ItemSearchPlugin {
                             }
                         }
                     }
-                    
                 }
+                #endregion
             } catch (Exception ex) {
                 PluginLog.LogError($"{ex}");
                 ImGui.SetScrollY(0);
@@ -884,7 +783,79 @@ namespace ItemSearchPlugin {
             if (stylesPushed > 0) ImGui.PopStyleColor(stylesPushed);
         }
 
+        private void DrawStainsSelector(Vector2 mainWindowPos, Vector2 mainWindowSize)
+        {
+            ImGui.SetNextWindowSize(new Vector2(210, 180));
+            ImGui.SetNextWindowPos(mainWindowPos + mainWindowSize - new Vector2(0, 180));
+            ImGui.Begin("Select Dye", ref showStainSelector,
+                ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove);
 
+            ImGui.BeginTabBar("stainShadeTabs");
+
+            var unselectedModifier = new Vector4(0, 0, 0, 0.7f);
+
+            foreach (var shade in StainShadeHeaders)
+            {
+                ImGui.PushStyleColor(ImGuiCol.TabActive, shade.Value);
+                ImGui.PushStyleColor(ImGuiCol.TabHovered, shade.Value);
+                ImGui.PushStyleColor(ImGuiCol.TabUnfocused, shade.Value);
+                ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, shade.Value);
+                ImGui.PushStyleColor(ImGuiCol.Tab, shade.Value - unselectedModifier);
+
+                if (ImGui.BeginTabItem($"    ###StainShade{shade.Key}"))
+                {
+                    var c = 0;
+
+                    PushStyle(ImGuiStyleVar.FrameBorderSize, 2f);
+                    foreach (var stain in stains.Where(s => s.Shade == shade.Key && !string.IsNullOrEmpty(s.Name)))
+                    {
+                        var b = stain.Color & 255;
+                        var g = (stain.Color >> 8) & 255;
+                        var r = (stain.Color >> 16) & 255;
+
+                        var stainColor = new Vector4(r / 255f, g / 255f, b / 255f, 1f);
+
+                        ImGui.PushStyleColor(ImGuiCol.Border,
+                            stain.Unknown4 ? new Vector4(1, 1, 0, 1) : new Vector4(1, 1, 1, 1));
+
+                        if (ImGui.ColorButton($"###stain{stain.RowId}", stainColor, ImGuiColorEditFlags.NoTooltip))
+                        {
+                            selectedStain = stain;
+                            selectedStainColor = stainColor;
+                            showStainSelector = false;
+                            Service.Configuration.SelectedStain = stain.RowId;
+                            Service.Configuration.Save();
+                        }
+
+                        ImGui.PopStyleColor(1);
+
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                            ImGui.SetTooltip(stain.Name);
+                        }
+
+                        if (c++ < 5)
+                        {
+                            ImGui.SameLine();
+                        }
+                        else
+                        {
+                            c = 0;
+                        }
+                    }
+
+                    PopStyle(1);
+
+                    ImGui.EndTabItem();
+                }
+
+                ImGui.PopStyleColor(5);
+            }
+
+            ImGui.EndTabBar();
+            ImGui.End();
+        }
 
         private void FixStainsOrder() {
             var move = stains.GetRange(92, 3);
