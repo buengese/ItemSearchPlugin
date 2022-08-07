@@ -76,9 +76,6 @@ namespace ItemSearchPlugin {
 
         private void RemoveCommands() {
             Service.CommandManager.RemoveHandler("/xlitem");
-#if DEBUG
-            CommandManager.RemoveHandler("/itemsearchdumploc");
-#endif
         }
 
     }

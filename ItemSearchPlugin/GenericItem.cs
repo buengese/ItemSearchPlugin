@@ -10,9 +10,9 @@ namespace ItemSearchPlugin {
             EventItem
         }
 
-        private EventItem eventItem = null;
-        private Item item = null;
-        private ItemType itemType;
+        private readonly EventItem eventItem = null;
+        private readonly Item item = null;
+        private readonly ItemType itemType;
 
         public GenericItem(EventItem eventItem) {
             this.eventItem = eventItem;
@@ -90,8 +90,8 @@ namespace ItemSearchPlugin {
 
         public static explicit operator Item(GenericItem genericItem) => genericItem.itemType == ItemType.Item ? genericItem.item : null;
         public static explicit operator EventItem(GenericItem genericItem) => genericItem.itemType == ItemType.EventItem ? genericItem.eventItem : null;
-        public static implicit operator GenericItem(EventItem eventItem) => new GenericItem(eventItem);
-        public static implicit operator GenericItem(Item item) => new GenericItem(item);
+        public static implicit operator GenericItem(EventItem eventItem) => new(eventItem);
+        public static implicit operator GenericItem(Item item) => new(item);
 
 
     }

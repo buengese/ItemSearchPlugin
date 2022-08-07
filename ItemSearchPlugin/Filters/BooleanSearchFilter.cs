@@ -14,7 +14,7 @@ namespace ItemSearchPlugin.Filters {
             }
             return (i, t, f) => {
                 if (p == null) return true;
-                var v = (bool) p.GetValue(i);
+                var v = (bool) (p.GetValue(i) ?? false);
                 return (invert ? !v : v) ? t : f;
             };
         }
