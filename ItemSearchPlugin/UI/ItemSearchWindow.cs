@@ -178,49 +178,6 @@ namespace ItemSearchPlugin {
             this._visible ^= true;
         }
 
-        /*
-        private void UpdateItemList(int delay = 100) {
-            PluginLog.Log("Loading Item List");
-            triedLoadingItems = true;
-            errorLoadingItems = false;
-            plugin.LuminaItems = null;
-            plugin.LuminaItemsClientLanguage = Service.Configuration.SelectedClientLanguage;
-#if DEBUG
-            var sw = new Stopwatch();
-#endif
-            Task.Run(async () => {
-
-                await Task.Delay(delay);
-#if DEBUG
-                sw.Start();
-#endif
-                try {
-                    var list = new List<GenericItem>();
-                    
-                    list.AddRange(Service.Data.GetExcelSheet<Item>(Service.Configuration.SelectedClientLanguage)!.Where(i => !string.IsNullOrEmpty(i.Name)).Select(i => new GenericItem(i)));
-                    list.AddRange(Service.Data.GetExcelSheet<EventItem>(Service.Configuration.SelectedClientLanguage)!.Where(i => !string.IsNullOrEmpty(i.Name)).Select(i => new GenericItem(i)));
-                    
-                    return list;
-                } catch (Exception ex) {
-                    errorLoadingItems = true;
-                    PluginLog.LogError("Failed loading Items");
-                    PluginLog.LogError(ex.ToString());
-                    return new List<GenericItem>();
-                }
-            }).ContinueWith(t => {
-#if DEBUG
-                sw.Stop();
-                PluginLog.Log($"Loaded Item List in: {sw.ElapsedMilliseconds}ms");
-#endif
-                if (errorLoadingItems) {
-                    return plugin.LuminaItems;
-                }
-
-                forceReload = true;
-                return plugin.LuminaItems = t.Result;
-            });
-        }*/
-
         public void Draw() {
             if (!this._visible)
             {
@@ -583,7 +540,7 @@ namespace ItemSearchPlugin {
                 }
 
                 var itemSize = ImGui.CalcTextSize("#plaholder");;
-                var rowSize = new Vector2(ImGui.GetWindowContentRegionWidth() - 20 * ImGui.GetIO().FontGlobalScale, itemSize.Y);;
+                var rowSize = itemSize with {X = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X - 20 * ImGui.GetIO().FontGlobalScale};
 
                 float cursorPosY = 0;
                 var scrollY = ImGui.GetScrollY();
@@ -712,30 +669,6 @@ namespace ItemSearchPlugin {
                 #region Hotkeys
                 var keyStateDown = ImGui.GetIO().KeysDown[0x28] || Service.KeyState[0x28];
                 var keyStateUp = ImGui.GetIO().KeysDown[0x26] || Service.KeyState[0x26];
-
-#if DEBUG
-                // Random up/down if both are pressed
-                if (keyStateUp && keyStateDown) {
-                    debounceKeyPress = 0;
-
-                    var r = new Random().Next(0, 5);
-
-                    switch (r) {
-                        case 1:
-                            keyStateUp = true;
-                            keyStateDown = false;
-                            break;
-                        case 0:
-                            keyStateUp = false;
-                            keyStateDown = false;
-                            break;
-                        default:
-                            keyStateUp = false;
-                            keyStateDown = true;
-                            break;
-                    }
-                }
-#endif
 
                 var hotkeyUsed = false;
                 if (keyStateUp && !keyStateDown) {
