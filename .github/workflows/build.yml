@@ -9,9 +9,9 @@ on:
     tags: ['v[0-9].[0-9]+.[0-9]+.[0-9]+']
 
 env:
-  SOLUTION_NAME: ItemSearchPlugin
+  SOLUTION_NAME: ItemSearch2
   INTERNAL_NAME: ItemSearch2
-  RELEASE_DIR: ItemSearchPlugin\bin\x64\Release.ILMerge\ItemSearchPlugin
+  RELEASE_DIR: ItemSearch2\bin\x64\Release.ILMerge\ItemSearch2
   PERSONAL_PLUGIN_REPO: buengese/DalamudPlugins
 
 
@@ -35,6 +35,9 @@ jobs:
           dotnet build --configuration Release
         env:
           DOTNET_CLI_TELEMETRY_OPTOUT: true
+      - name: Copy Resources
+        run: |
+          xcopy ${{ env.INTERNAL_NAME }}\Resources ${{ env.RELEASE_DIR}}
       - uses: actions/upload-artifact@v2
         with:
           name: PluginRepoZip
