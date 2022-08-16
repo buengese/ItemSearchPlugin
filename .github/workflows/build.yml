@@ -10,7 +10,7 @@ on:
 
 env:
   SOLUTION_NAME: ItemSearchPlugin
-  INTERNAL_NAME: ItemSearchPlugin
+  INTERNAL_NAME: ItemSearch2
   RELEASE_DIR: ItemSearchPlugin\bin\x64\Release.ILMerge\ItemSearchPlugin
   PERSONAL_PLUGIN_REPO: buengese/DalamudPlugins
 

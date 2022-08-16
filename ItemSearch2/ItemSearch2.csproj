@@ -1,0 +1,102 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup Label="Target">
+		<PlatformTarget>x64</PlatformTarget>
+		<TargetFramework>net5.0-windows</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<Platforms>x64</Platforms>
+		<Configurations>Debug;Release</Configurations>
+		<RootNamespace>ItemSearchPlugin</RootNamespace>
+	</PropertyGroup>
+	<PropertyGroup Label="Build">
+		<OutputType>Library</OutputType>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>Full</DebugType>
+	</PropertyGroup>
+	<PropertyGroup Label="Feature">
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Version>1.0.0.0</Version>
+		<Authors>Caraxi, buengese</Authors>
+	</PropertyGroup>
+	<ItemGroup Label="Resources">
+		<None Include="$(SolutionDir)/Resources/**/*" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+		<None Remove="Publish\**" />
+		<None Remove="lib\**" />
+	</ItemGroup>
+	<PropertyGroup>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<AssemblyName>ItemSearch2</AssemblyName>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+	</PropertyGroup>
+	<ItemGroup>
+		<Compile Remove="Publish\**" />
+		<EmbeddedResource Remove="Publish\**" />
+		<Compile Remove="lib\**" />
+		<EmbeddedResource Remove="lib\**" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="System.Linq.Async" Version="5.0.0" PrivateAssets="all" />
+		<PackageReference Include="DalamudPackager" Version="2.1.7" />
+		<PackageReference Include="ILRepack" Version="2.1.0-beta1" />
+	</ItemGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+		<DalamudPath>$(DALAMUD_PATH)</DalamudPath>
+	</PropertyGroup>
+	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+		<DalamudPath>$(AppData)\XIVLauncher\addon\Hooks\dev\</DalamudPath>
+	</PropertyGroup>
+
+	<Target Name="ILRepack" AfterTargets="PostBuildEvent" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+		<ItemGroup>
+			<InputAssemblies Include="$(TargetPath)" />
+			<InputAssemblies Include="$(TargetDir)*.dll" Exclude="$(TargetPath)" />
+		</ItemGroup>
+		<Exec Command="$(PkgILRepack)\tools\ILRepack.exe /lib:$(AppData)\XIVLauncher\addon\Hooks\dev /out:$(TargetDir)..\$(Configuration).ILMerge\$(TargetFileName) @(InputAssemblies, ' ')" />
+	</Target>
+
+	<ItemGroup>
+		<Reference Include="Microsoft.CSharp" />
+		<Reference Include="Dalamud">
+			<Private>false</Private>
+			<HintPath>$(DalamudPath)\Dalamud.dll</HintPath>
+		</Reference>
+		<Reference Include="FFXIVClientStructs">
+			<Private>false</Private>
+			<HintPath>$(DalamudPath)\FFXIVClientStructs.dll</HintPath>
+		</Reference>
+		<Reference Include="ImGui.NET">
+			<Private>false</Private>
+			<HintPath>$(DalamudPath)\ImGui.NET.dll</HintPath>
+		</Reference>
+		<Reference Include="ImGuiScene">
+			<Private>false</Private>
+			<HintPath>$(DalamudPath)\ImGuiScene.dll</HintPath>
+		</Reference>
+		<Reference Include="Serilog">
+			<Private>false</Private>
+			<HintPath>$(DalamudPath)\Serilog.dll</HintPath>
+		</Reference>
+		<Reference Include="Newtonsoft.Json">
+			<Private>false</Private>
+			<HintPath>$(DalamudPath)\Newtonsoft.Json.dll</HintPath>
+		</Reference>
+		<Reference Include="Lumina">
+			<Private>false</Private>
+			<HintPath>$(DalamudPath)\Lumina.dll</HintPath>
+		</Reference>
+		<Reference Include="Lumina.Excel">
+			<Private>false</Private>
+			<HintPath>$(DalamudPath)\Lumina.Excel.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Localization\de.json" />
+		<EmbeddedResource Include="Localization\fr.json" />
+		<EmbeddedResource Include="Localization\jp.json" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Content Include="Resources\NotoSans-Medium.otf" />
+	</ItemGroup>
+</Project>
