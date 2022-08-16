@@ -14,7 +14,7 @@
 	</PropertyGroup>
 	<PropertyGroup Label="Feature">
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Version>2.0.0.4</Version>
+		<Version>1.0.0.0</Version>
 		<Authors>Caraxi, buengese</Authors>
 	</PropertyGroup>
 	<ItemGroup Label="Resources">
@@ -22,15 +22,10 @@
 		<None Remove="Publish\**" />
 		<None Remove="lib\**" />
 	</ItemGroup>
-	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
-		<PathMap>$(AppOutputBase)=F:\repo\ItemSearch\ItemSearchPlugin</PathMap>
-		<Deterministic>true</Deterministic>
-	</PropertyGroup>
 	<PropertyGroup>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-		<AssemblyName>ItemSearchPlugin</AssemblyName>
+		<AssemblyName>ItemSearch2</AssemblyName>
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 	</PropertyGroup>
 	<ItemGroup>
@@ -41,7 +36,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="System.Linq.Async" Version="5.0.0" PrivateAssets="all" />
-		<PackageReference Include="DalamudPackager" Version="2.1.6" />
+		<PackageReference Include="DalamudPackager" Version="2.1.7" />
 		<PackageReference Include="ILRepack" Version="2.1.0-beta1" />
 	</ItemGroup>
 
