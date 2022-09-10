@@ -39,7 +39,7 @@ namespace ItemSearch2 {
 
                 var gameFunctions = new GameFunctions(address);
                 TryOn = new TryOn(gameFunctions);
-                CraftingRecipeFinder = new CraftingRecipeFinder(address);
+                CraftingRecipeFinder = new CraftingRecipeFinder();
             }
             catch (Exception ex)
             {

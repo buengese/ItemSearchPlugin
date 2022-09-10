@@ -1,89 +1,27 @@
 using System;
-using System.Runtime.InteropServices;
 using Lumina.Excel.GeneratedSheets;
 using System.Collections.Concurrent;
 using Dalamud.Game;
 using Dalamud.Logging;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 
 namespace ItemSearch2 {
     public class CraftingRecipeFinder : IDisposable {
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate IntPtr GetUIObjectDelegate();
-        private readonly GetUIObjectDelegate getUIObject;
-
-        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        private delegate IntPtr GetUIAgentModuleDelegate(IntPtr uiObject);
-        private GetUIAgentModuleDelegate getUIAgentModule;
-
-        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        private delegate IntPtr GetAgentObjectDelegate(IntPtr agentModule, uint agentID);
-        private readonly GetAgentObjectDelegate getAgentObject;
-
-        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        private delegate IntPtr SearchItemByCraftingMethodDelegate(IntPtr recipeAgentObject, ushort itemID);
-        private readonly SearchItemByCraftingMethodDelegate searchItemByCraftingMethod;
-
-        private readonly ConcurrentQueue<uint> searchQueue = new ConcurrentQueue<uint>();
+        private readonly ConcurrentQueue<uint> searchQueue = new();
 
         private bool disposed;
-        
-        private AddressResolver Address { get;  }
 
-        public CraftingRecipeFinder(AddressResolver address)
-        {
-            this.Address = address;
+        private unsafe void OnFrameworkUpdate(Framework framework) {
             try {
-                getUIObject = Marshal.GetDelegateForFunctionPointer<GetUIObjectDelegate>(address.GetUiObject);
-                getAgentObject = Marshal.GetDelegateForFunctionPointer<GetAgentObjectDelegate>(address.GetAgentObject);
-                searchItemByCraftingMethod = Marshal.GetDelegateForFunctionPointer<SearchItemByCraftingMethodDelegate>(address.SearchItemByCraftingMethod);
-            } catch (Exception ex) {
-                PluginLog.LogError(ex, "CraftingRecipeFinder: failed to setup delegates");
-            }
-        }
-
-        private void OnFrameworkUpdate(Framework framework) {
-            try
-            {
                 if (disposed) return;
-
                 if (Service.ClientState.LocalContentId == 0) return;
-
-                if (!searchQueue.TryDequeue(out var itemID))
-                {
+                if (!searchQueue.TryDequeue(out var itemID)) {
                     Service.Framework.Update -= OnFrameworkUpdate;
                     return;
                 }
 
-                var uiObjectPtr = getUIObject();
-                if (uiObjectPtr.Equals(IntPtr.Zero))
-                {
-                    PluginLog.LogError("CraftingRecipeFinder: Null pointer returned from GetUIObject()");
-                    return;
-
-                }
-
-                getUIAgentModule = Address.GetVirtualFunction<GetUIAgentModuleDelegate>(uiObjectPtr, 0, 35);
-                var uiAgentModulePtr = getUIAgentModule(uiObjectPtr);
-                if (uiAgentModulePtr.Equals(IntPtr.Zero))
-                {
-                    PluginLog.LogError("CraftingRecipeFinder: Null pointer returned from GetUIAgentModule()");
-                    return;
-                }
-
-                var recipeAgentPtr = getAgentObject(uiAgentModulePtr, 23);
-                if (recipeAgentPtr.Equals(IntPtr.Zero))
-                {
-                    PluginLog.LogError("CraftingRecipeFinder: Null pointer returned from GetAgentObject()");
-                    return;
-                }
-
-                searchItemByCraftingMethod(recipeAgentPtr, (ushort) itemID);
-
-            }
-            catch (NullReferenceException)
-            {
-                
-            }
+                AgentRecipeNote.Instance()->OpenRecipeByItemId(itemID);
+            } catch (NullReferenceException) { }
         }
 
         public void SearchRecipesByItem(Item item) {
